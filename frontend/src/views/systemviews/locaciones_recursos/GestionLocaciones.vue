@@ -36,7 +36,7 @@
                                 <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" /> Editar
                             </button>
                             <button
-                                @click="deleteLocaciones(locacion.id_locacion)"
+                                @click="requestDeleteLocacion(locacion.id_locacion)"
                                 class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
                                 <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" /> Eliminar
                             </button>
@@ -112,9 +112,19 @@
         </Modal>
 
         <Toast
-            v-model="isLoading"
-            message="Conectando..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar locacion"
+            message="¿Está seguro/a que desea eliminar esta locacion?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteLocaciones"
+            @cancel="showConfirmation = false"
         />
     </div>
 </template>
@@ -125,18 +135,40 @@ import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
 import Modal from "../../../components/Modal.vue"
 import Toast from '../../../components/Toast.vue'
+import Confirmation from "../../../components/Confirmation.vue";
 
 const locaciones = ref([])
 
 const showModal = ref(false)
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const loadingLocaciones = ref(false)
 const error = ref(false)
+
+const showConfirmation = ref(false)
+const locacionDeleteID = ref(null)
 
 //LOCACION FORM
 const nombre_locacion = ref('')
 const direccion = ref('')
 const descripcion_locacion = ref('')
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
+
+const requestDeleteLocacion = (id) => {
+    locacionDeleteID.value = id
+    showConfirmation.value = true
+}
 
 const validarFormulario = () => {
     const { nombre, direccion_locacion, descripcion } = {
@@ -155,7 +187,7 @@ const limpiarCampos = () => {
 }
 
 const createLocacion = async () => {
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         if (validarFormulario()) {
@@ -174,10 +206,12 @@ const createLocacion = async () => {
         locaciones.value.push(res.data)
         limpiarCampos()
         showModal.value = false
+        displayToast('Locacion creada', 'success')
     } catch (err) {
         console.error("Error al crear locacion: ", err)
+        displayToast('Error al crear locacion', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -195,18 +229,21 @@ const getLocaciones = async () => {
     }
 }
 
-const deleteLocaciones = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar esta locacion?')
-    if (!confirmacion) return
-    isLoading.value = true
+const deleteLocaciones = async () => {
+    const id = locacionDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/locacion/${id}`)
         locaciones.value = locaciones.value.filter(locacion => locacion.id_locacion !== id)
+        displayToast('Locacion eliminada', 'success')
     } catch (err) {
         console.error('Error al eliminar la locacion: ', err)
+        displayToast('Error al eliminar locacion', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 

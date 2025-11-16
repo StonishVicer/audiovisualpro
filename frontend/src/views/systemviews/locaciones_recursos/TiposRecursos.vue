@@ -190,7 +190,7 @@ onMounted(() => {
 
         <Confirmation
             :show="showConfirmation"
-            title="Confirmar Eliminación"
+            title="Eliminar tipo recurso"
             message="¿Está seguro/a que desea eliminar este tipo de recurso?"
             confirm-text="Eliminar"
             cancel-text="Cancelar"

@@ -4,6 +4,7 @@ import Modal from '../../../components/Modal.vue'
 import Toast from '../../../components/Toast.vue'
 import { onMounted, ref } from 'vue'
 import api from '../../../services/api.js'
+import Confirmation from '../../../components/Confirmation.vue'
 
 const clientes = ref([])
 
@@ -23,6 +24,14 @@ const loadingClientes = ref(false)
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
+
+const showConfirmation = ref(false)
+const clienteDeleteID = ref(null)
+
+const requestDeleteCliente = (id) => {
+    clienteDeleteID.value = id
+    showConfirmation.value = true
+}
 
 const displayToast = (message, type) => {
     toastMessage.value = message
@@ -97,9 +106,10 @@ const getClientes = async () => {
     }
 }
 
-const deleteCliente = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este cliente?')
-    if (!confirmacion) return
+const deleteCliente = async () => {
+    const id = clienteDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
     isConnecting.value = true
 
     try {
@@ -184,7 +194,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="deleteCliente(cliente.id_cliente)"
+                                    @click="requestDeleteCliente(cliente.id_cliente)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -295,6 +305,16 @@ onMounted(() => {
             v-model="showToast"
             :message="toastMessage"
             :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar cliente"
+            message="¿Está seguro/a que desea eliminar este cliente?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteCliente"
+            @cancel="showConfirmation = false"
         />
     </div>
 </template>

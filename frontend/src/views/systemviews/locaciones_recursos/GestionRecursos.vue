@@ -34,7 +34,7 @@
                                 <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" /> Editar
                             </button>
                             <button
-                                @click="deleteRecursosTecnicos(recurso.id_recurso)"
+                                @click="requestDeleteRecursoTecnico(recurso.id_recurso)"
                                 class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                             >
                                 <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" /> Eliminar
@@ -105,6 +105,16 @@
             :message="toastMessage"
             :type="toastType"
         />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar recurso tecnico"
+            message="¿Está seguro/a que desea eliminar este recurso tecnico?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteRecursosTecnicos"
+            @cancel="showConfirmation = false"
+        />
     </div>
 </template>
 
@@ -114,6 +124,7 @@ import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
 import Modal from '../../../components/Modal.vue'
 import Toast from '../../../components/Toast.vue'
+import Confirmation from '../../../components/Confirmation.vue'
 
 const recursos_tecnicos = ref([])
 
@@ -122,9 +133,17 @@ const isConnecting = ref(false)
 const loadingRecursosTecnicos = ref(false)
 const error = ref(false)
 
+const showConfirmation = ref(false)
+const recursoDeleteID = ref(null)
+
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
+
+const requestDeleteRecursoTecnico = (id) => {
+    recursoDeleteID.value = id
+    showConfirmation.value = true
+}
 
 const displayToast = (message, type) => {
     toastMessage.value = message
@@ -209,9 +228,10 @@ const getRecursosTecnicos = async () => {
     }
 }
 
-const deleteRecursosTecnicos = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este recurso tecnico?')
-    if (!confirmacion) return
+const deleteRecursosTecnicos = async () => {
+    const id = recursoDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
     isConnecting.value = true
 
     try {

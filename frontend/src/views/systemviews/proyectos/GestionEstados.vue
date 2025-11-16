@@ -3,13 +3,35 @@ import { Icon } from '@iconify/vue'
 import { ref, onMounted } from 'vue'
 import api from '../../../services/api.js'
 import Toast from '../../../components/Toast.vue';
+import Confirmation from '../../../components/Confirmation.vue'
 
 const isLoading = ref(false)
 const loadingEstados = ref(false)
 
+const showConfirmation = ref(false)
+const estadoProyectoDeleteID = ref(null)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
 const nombre_estado = ref('')
 
 const estados_proyecto = ref([])
+
+const requestDeleteEstadoProyecto = (id) => {
+    estadoProyectoDeleteID.value = id
+    showConfirmation.value = true
+}
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
 
 const createEstadoProyecto = async () => {
     isLoading.value = true
@@ -22,8 +44,10 @@ const createEstadoProyecto = async () => {
         console.log('Estado de proyecto creado con exito: ', res.data)
         estados_proyecto.value.push(res.data)
         nombre_estado.value = ''
+        displayToast('Estado de proyecto creado', 'success')
     } catch (err) {
         err.response ? console.error('Error al crear el estado de proyecto: ', err.response.data) : console.error('Error al crear el estado de proyecto: ', err)
+        displayToast('Error al crear estado de proyecto', 'error')
     } finally {
         isLoading.value = false
     }
@@ -43,16 +67,19 @@ const getEstadosProyecto = async () => {
     }
 }
 
-const deleteEstadoProyecto = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este estado de proyecto?')
-    if (!confirmacion) return
+const deleteEstadoProyecto = async () => {
+    const id = estadoProyectoDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
     isLoading.value = true
 
     try {
         await api.delete(`/api/estadosproyecto/${id}`)
         estados_proyecto.value = estados_proyecto.value.filter(estado => estado.id_estado_proyecto !== id)
+        displayToast('Estado de proyecto eliminado', 'success')
     } catch (err) {
         console.error('Error al eliminar el estado de proyecto: ', err)
+        displayToast('Error al eliminar estado de proyecto', 'error')
     } finally {
         isLoading.value = false
     }
@@ -68,7 +95,7 @@ onMounted(() => {
         <div class="border-b border-gray-200 pb-3 mb-4">
             <h3 class="text-center font-bold text-lg">Gestion de Estados de Proyectos</h3>
         </div>
-        
+
         <div class="mb-4 border-b border-gray-200 pb-3">
             <p class="text-sm font-semibold text-gray-500 mb-1">Nuevo estado</p>
             <form @submit.prevent="createEstadoProyecto">
@@ -135,7 +162,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="deleteEstadoProyecto(estados.id_estado_proyecto)"
+                                    @click="requestDeleteEstadoProyecto(estados.id_estado_proyecto)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -157,9 +184,19 @@ onMounted(() => {
         </div>
 
         <Toast
-            v-model="isLoading"
-            message="Creando estado..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar estado proyecto"
+            message="¿Está seguro/a que desea eliminar este estado de proyecto?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteEstadoProyecto"
+            @cancel="showConfirmation = false"
         />
     </div>
 </template>
