@@ -16,9 +16,22 @@ const codigoRif = ref('V')
 const codigoTelefono = ref('0414')
 
 const showModal = ref(false)
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const error = ref(false)
 const loadingClientes = ref(false)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
 
 const validarFormulario = () => {
     const { nombre, rif, email, telefono } = {
@@ -41,7 +54,7 @@ const limpiarCampos = () => {
 }
 
 const createCliente = async () => {
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         if (!validarFormulario()) {
@@ -61,10 +74,12 @@ const createCliente = async () => {
         clientes.value.push(res.data)
         limpiarCampos()
         showModal.value = false
+        displayToast('Cliente creado', 'success')
     } catch (err) {
         console.error('Error al crear al cliente:', err);
+        displayToast('Error al crear al cliente', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -85,15 +100,17 @@ const getClientes = async () => {
 const deleteCliente = async (id) => {
     const confirmacion = confirm('Esta seguro/a que desea eliminar este cliente?')
     if (!confirmacion) return
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/clientes/${id}`)
         clientes.value = clientes.value.filter(cliente => cliente.id_cliente !== id)
+        displayToast('Cliente eliminado', 'success')
     } catch (err) {
         console.error('Error al eliminar el cliente: ', err)
+        displayToast('Error al eliminar el cliente', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -275,9 +292,9 @@ onMounted(() => {
         </Modal>
 
         <Toast
-            v-model="isLoading"
-            message="Conectando..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
         />
     </div>
 </template>

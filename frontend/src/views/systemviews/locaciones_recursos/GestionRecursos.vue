@@ -101,9 +101,9 @@
         </Modal>
 
         <Toast
-            v-model="isLoading"
-            message="Conectando..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
         />
     </div>
 </template>
@@ -118,9 +118,22 @@ import Toast from '../../../components/Toast.vue'
 const recursos_tecnicos = ref([])
 
 const showModal = ref(false)
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const loadingRecursosTecnicos = ref(false)
 const error = ref(false)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
 
 //form
 const tiposRecursos = ref([])
@@ -155,7 +168,7 @@ const createRecursoTecnico = async () => {
     }
     error.value = false
 
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         const res = await api.post('/api/recursostecnicos', {
@@ -173,10 +186,12 @@ const createRecursoTecnico = async () => {
         recursos_tecnicos.value.push(nuevoRecurso)
         limpiarCampos()
         showModal.value = false
+        displayToast('Recurso tecnico creado', 'success')
     } catch (err) {
         console.log('Error al crear nuevo recurso tecnico: ', err)
+        displayToast('Error al crear el recurso tecnico', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -197,15 +212,17 @@ const getRecursosTecnicos = async () => {
 const deleteRecursosTecnicos = async (id) => {
     const confirmacion = confirm('Esta seguro/a que desea eliminar este recurso tecnico?')
     if (!confirmacion) return
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/recursostecnicos/${id}`)
         recursos_tecnicos.value = recursos_tecnicos.value.filter(recurso => recurso.id_recurso !== id)
+        displayToast('Recurso tecnico eliminado', 'success')
     } catch (err) {
         console.log('Error al eliminar el recurso tecnico')
+        displayToast('Error al eliminar el recurso tecnico', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 

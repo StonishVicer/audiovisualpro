@@ -3,9 +3,31 @@ import { Icon } from "@iconify/vue";
 import Toast from '../../../components/Toast.vue'
 import { ref, onMounted } from 'vue'
 import api from '../../../services/api'
+import Confirmation from '../../../components/Confirmation.vue'
 
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const loadingTiposRecursos = ref(false)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const showConfirmation = ref(false)
+const tipoDeleteID = ref(null)
+
+const requestDeleteTipoRecurso = (id) => {
+    tipoDeleteID.value = id
+    showConfirmation.value = true
+}
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
 
 const nombre_tipo = ref('')
 
@@ -26,7 +48,7 @@ const getTiposRecursos = async () => {
 }
 
 const createTiposRecursos = async () => {
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         const res = await api.post('/api/tiposrecursos', {
@@ -36,25 +58,34 @@ const createTiposRecursos = async () => {
         console.log('Tipo de recurso creado con exito:', res.data)
         tipos_recursos.value.push(res.data)
         nombre_tipo.value = ''
+        displayToast('Tipo de recurso creado', 'success')
     } catch (err) {
         console.log('Error al crear tipo de recurso:', err);
+        displayToast('Error al crear tipo de recurso', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
-const deleteTiposRecursos = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este tipo de recurso?')
-    if (!confirmacion) return
-    isLoading.value = true
+const deleteTiposRecursos = async () => {
+    const id = tipoDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/tiposrecursos/${id}`)
         tipos_recursos.value = tipos_recursos.value.filter(tipo => tipo.id_tipo_recurso !== id)
+        displayToast('Tipo de recurso eliminado', 'success')
     } catch (err) {
         console.log('Error al eliminar el tipo de recurso:', err)
+        if(err.response && err.response.status === 409) {
+            displayToast(err.response.data.message, 'error')
+        } else {
+            displayToast('Error al eliminar. Intentelo denuevo.', 'error')
+        }
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -65,7 +96,7 @@ onMounted(() => {
 
 <template>
     <div class="h-screen flex flex-col">
-        <div class="border-b border-gray-200 pb-3 mb-4">
+        <div class="border-b border-gray-200 pb-3 mb-4 flex justify-center">
             <h3 class="text-center font-bold text-lg">Gestion de Tipos de Recurso</h3>
         </div>
 
@@ -136,7 +167,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="deleteTiposRecursos(tipos.id_tipo_recurso)"
+                                    @click="requestDeleteTipoRecurso(tipos.id_tipo_recurso)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -157,10 +188,20 @@ onMounted(() => {
             </div>
         </div>
 
+        <Confirmation
+            :show="showConfirmation"
+            title="Confirmar Eliminación"
+            message="¿Está seguro/a que desea eliminar este tipo de recurso?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteTiposRecursos"
+            @cancel="showConfirmation = false"
+        />
+
         <Toast
-            v-model="isLoading"
-            message="Conectando..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
         />
     </div>
 </template>
