@@ -42,7 +42,8 @@ const menus = [
         icon: 'material-symbols:camera',
         submenu: [
             { name: 'Locaciones', icon: 'mdi:location', route: '/system/locaciones' },
-            { name: 'Recursos', icon: 'mdi:camera', route: '/system/recursos' }
+            { name: 'Recursos', icon: 'mdi:camera', route: '/system/recursos' },
+            { name: 'Tipos Recursos', icon: 'mdi:camera', route: '/system/tiposrecursos' }
         ]
     },
     {

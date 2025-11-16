@@ -1,65 +1,60 @@
-<script setup>
-import { ref, onMounted } from 'vue';
-import { Icon } from '@iconify/vue';
-import Toast from '../../../components/Toast.vue';
-import api from '../../../services/api.js'
+<script>
+import { Icon } from "@iconify/vue";
+import Toast from '../../../components/Toast.vue'
+import { ref, onMounted } from 'vue'
+import api from '../../../services/api'
+
+const tipos_recursos = ref([])
 
 const isLoading = ref(false)
-const loadingTipos = ref(false)
+const loadingTiposRecursos = ref(false)
 
 const nombre_tipo = ref('')
 
-const tipos_proyecto = ref([])
+const getTiposRecursos = async () => {
+    loadingTiposRecursos.value = true
 
-const createTipoProyecto = async () => {
+    try {
+        const res = await api.get('/api/tiposrecursos')
+        tipos_recursos.value = res.data
+        console.log('Tipos de recurso obtenidos con exito:', tipos_recursos.value)
+    } catch (err) {
+        console.log('Error al obtener los tipos de recurso')
+    } finally {
+        loadingTiposRecursos.value = false
+    }
+}
+
+const createTiposRecursos = async () => {
     isLoading.value = true
 
     try {
-        const res = await api.post('/api/tiposproyecto', {
-            nombre_tipo:  nombre_tipo.value
+        const res = await api.post('/api/tiposrecursos', {
+            nombre_tipo: nombre_tipo.value
         })
 
-        console.log('Tipo de proyecto creado con exito: ', res.data)
-        tipos_proyecto.value.push(res.data)
+        console.log('Tipo de recurso creado con exito:', res.data)
+        tipos_recursos.value.push(res.data)
         nombre_tipo.value = ''
     } catch (err) {
-        err.response ? console.error('Error al crear el tipo de proyecto: ', err.response.data) : console.error('Error al crear el tipo de proyecto: ', err)
+        console.log('Error al crear tipo de recurso:', err);
     } finally {
         isLoading.value = false
     }
 }
 
-const getTiposProyecto = async () => {
-    loadingTipos.value = true
-
+const deleteTiposRecursos = async () => {
     try {
-        const res = await api.get('/api/tiposproyecto')
-        tipos_proyecto.value = res.data
-        console.log('Tipos de proyecto obtenidos con exito: ', tipos_proyecto.value)
-    } catch (err) {
-        console.error('Error al obtener los tipos de proyecto: ', err)
-    } finally {
-        loadingTipos.value = false
-    }
-}
 
-const deleteTipoProyecto = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este tipo de proyecto?')
-    if (!confirmacion) return
-    isLoading.value = true
-
-    try {
-        await api.delete(`/api/tiposproyecto/${id}`)
-        tipos_proyecto.value = tipos_proyecto.value.filter(tipo => tipo.id_tipo_proyecto !== id)
     } catch (err) {
-        console.error('Error al eliminar el tipo de proyecto: ', err)
+
     } finally {
-        isLoading.value = false
+
     }
 }
 
 onMounted(() => {
-    getTiposProyecto()
+    getTiposRecursos()
 })
 </script>
 
@@ -70,8 +65,8 @@ onMounted(() => {
         </div>
 
         <div class="mb-4 border-b border-gray-200 pb-3">
-            <p class="text-sm font-semibold text-gray-500 mb-1">Nuevo tipo</p>
-            <form @submit.prevent="createTipoProyecto">
+            <p class="text-sm font-semibold text-gray-(500 mb-1">Nuevo tipo</p>
+            <form @submit.prevent="createTiposRecursos">
                 <div class="flex space-x-2">
                     <div class="relative flex-1">
                         <input
@@ -108,15 +103,15 @@ onMounted(() => {
 
         <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg min-h-[400px] max-h-[calc(100vh-240px)]">
             <div>
-                <div v-if="loadingTipos">
+                <div v-if="loadingTiposRecursos">
                     <div class="flex items-center justify-center text-center mt-3">
                         <div class="flex text-[15px] font-semibold text-blue-500 items-center justify-center w-full bg-blue-100 border border-blue-200 p-3 mx-3 rounded-xl shadow-md">
                             <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
-                            Cargando tipos de proyectos...
+                            Cargando tipos de recursos...
                         </div>
                     </div>
                 </div>
-                <table v-else-if="tipos_proyecto.length > 0" class="table-auto w-full">
+                <table v-else-if="tipos_recursos.length > 0" class="table-auto w-full">
                     <thead>
                         <tr class="bg-green-100 text-green-900">
                             <th class="px-4 py-2 text-left">ID</th>
@@ -125,9 +120,9 @@ onMounted(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="tipos in tipos_proyecto" :key="tipos.id_tipo_proyecto" class="border-b border-green-100 hover:bg-green-50 transition">
-                            <td class="px-4 py-2">{{ tipos.id_tipo_proyecto }}</td>
-                            <td class="px-4 py-2">{{ tipos.nombre_tipo }}</td>
+                        <tr  class="border-b border-green-100 hover:bg-green-50 transition">
+                            <td class="px-4 py-2"></td>
+                            <td class="px-4 py-2"></td>
                             <td class="px-4 py-2 flex items-center gap-1">
                                 <button
                                     class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
@@ -136,7 +131,6 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="deleteTipoProyecto(tipos.id_tipo_proyecto)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -150,7 +144,7 @@ onMounted(() => {
                     <div class="flex items-center justify-center text-center mt-3">
                         <div class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
                             <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
-                            No hay tipos de proyectos creados.
+                            No hay tipos de recursos creados.
                         </div>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ import clienteRoutes from './routes/cliente.routes.js'
 import tiposProyectoRoutes from './routes/tiposProyecto.routes.js'
 import estadosProyectoRoutes from './routes/estadosProyecto.routes.js'
 import locacionRoutes from './routes/locacion.routes.js'
+import tiposRecursosRoutes from "./routes/tiposRecursos.routes.js";
 
 dotenv.config()
 const app = express()
@@ -19,6 +20,7 @@ app.use('/api/clientes', clienteRoutes)
 app.use('/api/tiposproyecto', tiposProyectoRoutes)
 app.use('/api/estadosproyecto', estadosProyectoRoutes)
 app.use('/api/locacion', locacionRoutes)
+app.use('/api/tiposrecursos', tiposRecursosRoutes)
 
 const PORT = process.env.PORT || 3000
 
