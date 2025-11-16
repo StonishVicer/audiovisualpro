@@ -43,7 +43,7 @@ const menus = [
         submenu: [
             { name: 'Locaciones', icon: 'mdi:location', route: '/system/locaciones' },
             { name: 'Recursos', icon: 'mdi:camera', route: '/system/recursos' },
-            { name: 'Tipos Recursos', icon: 'mdi:camera', route: '/system/tiposrecursos' }
+            { name: 'Tipos Recursos', icon: 'solar:camera-add-bold', route: '/system/tiposrecursos' }
         ]
     },
     {

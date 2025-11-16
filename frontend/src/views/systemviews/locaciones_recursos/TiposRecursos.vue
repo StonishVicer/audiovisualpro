@@ -1,15 +1,15 @@
-<script>
+<script setup>
 import { Icon } from "@iconify/vue";
 import Toast from '../../../components/Toast.vue'
 import { ref, onMounted } from 'vue'
 import api from '../../../services/api'
 
-const tipos_recursos = ref([])
-
 const isLoading = ref(false)
 const loadingTiposRecursos = ref(false)
 
 const nombre_tipo = ref('')
+
+const tipos_recursos = ref([])
 
 const getTiposRecursos = async () => {
     loadingTiposRecursos.value = true
@@ -43,13 +43,18 @@ const createTiposRecursos = async () => {
     }
 }
 
-const deleteTiposRecursos = async () => {
+const deleteTiposRecursos = async (id) => {
+    const confirmacion = confirm('Esta seguro/a que desea eliminar este tipo de recurso?')
+    if (!confirmacion) return
+    isLoading.value = true
+
     try {
-
+        await api.delete(`/api/tiposrecursos/${id}`)
+        tipos_recursos.value = tipos_recursos.value.filter(tipo => tipo.id_tipo_recurso !== id)
     } catch (err) {
-
+        console.log('Error al eliminar el tipo de recurso:', err)
     } finally {
-
+        isLoading.value = false
     }
 }
 
@@ -61,7 +66,7 @@ onMounted(() => {
 <template>
     <div class="h-screen flex flex-col">
         <div class="border-b border-gray-200 pb-3 mb-4">
-            <h3 class="text-center font-bold text-lg">Gestion de Tipos de Proyectos</h3>
+            <h3 class="text-center font-bold text-lg">Gestion de Tipos de Recurso</h3>
         </div>
 
         <div class="mb-4 border-b border-gray-200 pb-3">
@@ -120,9 +125,9 @@ onMounted(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr  class="border-b border-green-100 hover:bg-green-50 transition">
-                            <td class="px-4 py-2"></td>
-                            <td class="px-4 py-2"></td>
+                        <tr v-for="tipos in tipos_recursos" :key="tipos.id_tipo_recurso" class="border-b border-green-100 hover:bg-green-50 transition">
+                            <td class="px-4 py-2">{{ tipos.id_tipo_recurso }}</td>
+                            <td class="px-4 py-2">{{ tipos.nombre_tipo }}</td>
                             <td class="px-4 py-2 flex items-center gap-1">
                                 <button
                                     class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
@@ -131,6 +136,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
+                                    @click="deleteTiposRecursos(tipos.id_tipo_recurso)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />

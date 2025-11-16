@@ -37,77 +37,50 @@
         <div class="flex justify-end mt-4">
             <button
                 class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors"
-                @click="modalNuevoRecurso = true">
+                @click="showModal = true">
                 <Icon icon="material-symbols:add" width="25" height="25" class="mr-2" /> Nuevo Recurso
             </button>
         </div>
-        <div v-if="modalNuevoRecurso" class="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
-            <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-lg relative">
-                <button class="absolute top-2 right-2 text-2xl font-bold text-gray-500"
-                    @click="modalNuevoRecurso = false">&times;</button>
-                <h4 class="font-bold text-lg mb-4 text-center">Nuevo Recurso</h4>
-                <form @submit.prevent="crearRecurso">
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Nombre del Equipo</label>
-                        <input v-model="nuevoRecurso.nombreequipo" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Tipo de Recurso</label>
-                        <input v-model="nuevoRecurso.nombretipo" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
-                    </div>
-                    <div class="flex justify-end gap-2 mt-5">
-                        <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                            @click="modalNuevoRecurso = false">Cancelar</button>
-                        <button type="submit"
-                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">Guardar</button>
+
+        <Modal
+            v-if="showModal" :show="showModal" @close="showModal = false"
+            title="Nuevo Recurso Tecnico"
+        >
+            <div>
+                <form @submit.prevent="createRecursoTecnico" class="mb-2">
+                    <div class="mb-2">
+                        
                     </div>
                 </form>
             </div>
-        </div>
+        </Modal>
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
+import Modal from '../../../components/Modal.vue'
 
-const recursos = ref([
-    {
-        idrecurso: 1,
-        nombreequipo: 'Consola Yamaha MG16XU',
-        nombretipo: 'Consola de Audio'
-    },
-    {
-        idrecurso: 2,
-        nombreequipo: 'Micrófono Shure SM58',
-        nombretipo: 'Micrófono'
-    },
-    {
-        idrecurso: 3,
-        nombreequipo: 'Proyector Epson EB-U42',
-        nombretipo: 'Proyector'
-    }
-])
+const showModal = ref(false)
 
-const modalNuevoRecurso = ref(false)
-const nuevoRecurso = ref({
-    nombreequipo: '',
-    nombretipo: ''
-})
+tiposRecursos_select = ref([])
 
-// Agregar la lógica real después, por ahora dejé la estructura de como PIENSO que debería hacerse.
-const crearRecurso = async () => {
+const cargarTiposRecursos = async () => {
     try {
-        await api.post('/apirecursos', nuevoRecurso.value)
-        modalNuevoRecurso.value = false
-        nuevoRecurso.value = { nombreequipo: '', nombretipo: '' }
-        // getRecursos() y de acá parto cuando sepa como hacerle ;P
+        const res = await api.get('/api/tiposrecursos')
+        tiposRecursos_select.value = res.data
     } catch (err) {
-        alert('No se pudo crear el recurso')
-        console.error(err)
+        console.error('Error al cargar los tipos de recurso:', err);
     }
 }
+
+const createRecursoTecnico = async () => {
+
+}
+
+onMounted(() => {
+    cargarTiposRecursos()
+})
 </script>

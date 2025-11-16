@@ -1,7 +1,18 @@
 import { pool } from "../database/database.js";
 
 export const getTipoRecursoById = async (req, res) => {
+    try {
+        const { id } = req.params
+        const result = await pool.query('SELECT * FROM tipos_recurso WHERE id_tipo_recurso = $1', [id])
 
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Tipo de recurso no encontrado' })
+        }
+
+        res.json(result.rows[0])
+    } catch (err) {
+        res.status(500).json({ message: 'Error al obtener el tipo de recurso por ID'})
+    }
 }
 
 export const getTiposRecurso = async (req, res) => {
@@ -23,7 +34,7 @@ export const createTipoRecurso = async (req, res) => {
         const { nombre_tipo } = req.body
 
         const result = await pool.query(
-            'INSERTO INTO tipos_recurso (nombre_tipo) VALUES ($1) RETURNING 8',
+            'INSERT INTO tipos_recurso (nombre_tipo) VALUES ($1) RETURNING *',
             [nombre_tipo]
         )
 
@@ -34,5 +45,16 @@ export const createTipoRecurso = async (req, res) => {
 }
 
 export const deleteTipoRecurso = async (req, res) => {
+    try {
+        const { id } = req.params
+        const result = await pool.query('DELETE FROM tipos_recurso WHERE id_tipo_recurso = $1 RETURNING *', [id])
 
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'Tipo de recurso no encontrado' })
+        }
+
+        res.json({ message: 'Tipo de recurso eliminado correctamente' })
+    } catch (err) {
+        res.status(500).json({ message: 'Error al eliminar el tipo de recurso' })
+    }
 }
