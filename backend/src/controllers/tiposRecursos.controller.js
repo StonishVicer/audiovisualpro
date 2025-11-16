@@ -55,6 +55,10 @@ export const deleteTipoRecurso = async (req, res) => {
 
         res.json({ message: 'Tipo de recurso eliminado correctamente' })
     } catch (err) {
+        if (err.code === '23503') {
+            console.error('Intento fallido al eliminar el tipo de recurso con dependencias:', err.detail)
+            res.status(409).json({ message: 'No se puede eliminar el tipo de recurso. Existen recursos tecnicos que dependen de el.' })
+        }
         res.status(500).json({ message: 'Error al eliminar el tipo de recurso' })
     }
 }
