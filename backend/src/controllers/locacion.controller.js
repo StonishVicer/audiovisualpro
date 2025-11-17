@@ -20,7 +20,6 @@ export const getLocaciones = async (req, res) => {
         const result = await pool.query('SELECT * FROM locaciones ORDER BY id_locacion ASC')
         if(result.rows.length === 0){
             res.status(404).json({ message: 'No se encontraron locaciones' })
-        }
 
         res.json(result.rows)
     } catch (err) {
