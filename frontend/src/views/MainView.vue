@@ -48,8 +48,8 @@ const togglePasswordVisibility = () => {
 
 <template>
     <div class="min-h-screen flex items-center justify-center bg-green-50 p-4">
-        <div class="grid grid-cols-2 gap-4">
-            <div class="w-150 bg-white rounded-2xl shadow-lg max-w-sm p-8 border border-green-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+            <div class="w-full bg-white rounded-2xl shadow-lg p-8 border border-green-100">
                 <h1 class="text-center mb-4 font-bold text-green-600 text-xl">Inicio de Sesion</h1>
                 
                 <form @submit.prevent="handleLogin" class="space-y-4">
@@ -97,14 +97,23 @@ const togglePasswordVisibility = () => {
                     </button>
                 </form>
             </div>
-            <div class="flex items-center flex-col bg-white rounded-2xl shadow-lg max-w-sm p-8 border border-green-100">
+            
+            <div class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-lg p-8 border border-green-100">
                 <h1 class="text-center mb-4 font-bold text-green-600 text-xl">Chatear</h1>
 
-                <p class="text-center mb-4 font-semibold text-gray-500 text-lg">En este apartado, podra chatear en tiempo real con el administrador del sistema para asi poder discutir sobre proyectos, sugerencias, etc.</p>
+                <p class="text-center mb-4 font-semibold text-gray-500 text-lg">
+                    En este apartado, podra chatear en tiempo real con el administrador del sistema para asi poder discutir sobre proyectos, sugerencias, etc.
+                </p>
 
-                <RouterLink to="/client/chat" class="cursor-pointer mt-2 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg transition-colors text-center">Chatear</RouterLink>
+                <RouterLink
+                    to="/client/chat"
+                    class="cursor-pointer mt-2 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg transition-colors text-center"
+                >
+                    Chatear
+                </RouterLink>
             </div>
         </div>
+
         <Toast
             v-model="isLoading"
             message="Conectando..."
@@ -112,3 +121,19 @@ const togglePasswordVisibility = () => {
         />
     </div>
 </template>
+
+<style scoped>
+@media (max-width: 640px) {
+  .grid {
+    gap: 2rem;
+  }
+
+  form {
+    font-size: 0.95rem;
+  }
+
+  input {
+    font-size: 0.95rem;
+  }
+}
+</style>

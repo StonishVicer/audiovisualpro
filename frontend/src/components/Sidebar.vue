@@ -16,6 +16,11 @@ const menus = [
         route: '/system'
     },
     {
+        name: 'Chat',
+        icon: 'material-symbols:chat',
+        route: '/system/chat'
+    },
+    {
         name: 'Clientes y Contratos',
         icon: 'mdi:account-file',
         submenu: [

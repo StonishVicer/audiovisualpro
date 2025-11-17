@@ -39,88 +39,111 @@
         <div class="flex justify-end mt-4">
             <button
                 class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors"
-                @click="modalNuevaLocacion = true">
+                @click="showModal = true">
                 <Icon icon="material-symbols:add" width="25" height="25" class="mr-2" /> Nueva Locación
             </button>
         </div>
-        <div v-if="modalNuevaLocacion" class="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
-            <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-lg relative">
-                <button class="absolute top-2 right-2 text-2xl font-bold text-gray-500"
-                    @click="modalNuevaLocacion = false">&times;</button>
-                <h4 class="font-bold text-lg mb-4 text-center">Nueva Locación</h4>
-                <form @submit.prevent="crearLocacion">
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Nombre</label>
-                        <input v-model="nuevaLocacion.nombrelocacion" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Dirección</label>
-                        <input v-model="nuevaLocacion.direccion" class="w-full border px-3 py-2 rounded" type="text" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Descripción</label>
-                        <textarea v-model="nuevaLocacion.descripcionlocacion" class="w-full border px-3 py-2 rounded"
-                            rows="3" />
-                    </div>
-                    <div class="flex justify-end gap-2 mt-5">
-                        <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                            @click="modalNuevaLocacion = false">Cancelar</button>
-                        <button type="submit"
-                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">Guardar</button>
-                    </div>
-                </form>
+        
+        <Modal
+            v-if="showModal" :show="showModal" @close="showModal = false"
+            title="Nueva Locacion"
+        >
+            <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                <Icon icon="mdi:error" width="25" heigth="25" class="mr-2" />
+                Complete todos los campos.
             </div>
-        </div>
+
+            <form @submit.prevent="createLocacion" class="mb-2">
+                <div class="mb-2">
+                    <div class="flex flex-col mb-2">
+                        <label for="nombre" class="text-sm font-semibold text-gray-500 mb-1">Nombre</label>
+                        <input
+                            type="text"
+                            v-model="nombre_locacion"
+                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            placeholder="Nombre"
+                        >
+                    </div>
+                </div>
+            </form>
+        </Modal>
+
+        <Toast
+            v-model="isLoading"
+            message="Conectando..."
+            type="loading"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, withDirectives } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
+import Modal from "../../../components/Modal.vue"
+import Toast from '../../../components/Toast.vue'
 
-const locaciones = ref([
-    {
-        idlocacion: 1,
-        nombrelocacion: 'Hotel Tiffany (Salón Tabure)',
-        direccion: 'Urb. Nueva Segovia, Calle 2 entre Carrera 1 y Av. Lara.',
-        descripcionlocacion: 'Salones versátiles y exclusivos con servicios de organización de eventos corporativos y sociales de alto nivel.'
-    },
-    {
-        idlocacion: 2,
-        nombrelocacion: 'Lidotel Barquisimeto (Gran Salón Doral)',
-        direccion: 'C.C. Sambil Barquisimeto, Av. Venezuela con Av. Argimiro Bracamonte.',
-        descripcionlocacion: 'Modernas instalaciones en el centro comercial Sambil, con varios salones de alta tecnología audiovisual y servicio exclusivo de banquetes.'
+const locaciones = ref([])
+
+const showModal = ref(false)
+const isLoading = ref(false)
+const error = ref(false)
+
+//LOCACION FORM
+const nombre_locacion = ref('')
+const direccion = ref('')
+const descripcion_locacion = ref('')
+
+const validarFormulario = () => {
+    const { nombre, direccion_locacion, descripcion } = {
+        nombre: nombre_locacion.value.trim(),
+        direccion_locacion: direccion.value.trim(),
+        descripcion: descripcion_locacion.value.trim()
     }
-])
-const modalNuevaLocacion = ref(false)
-const nuevaLocacion = ref({
-    nombrelocacion: '',
-    direccion: '',
-    descripcionlocacion: ''
-})
+    if (!nombre || !direccion_locacion || !descripcion) return false
+    return true
+}
 
-const getLocaciones = async () => {
+const limpiarCampos = () => {
+    nombre_locacion.value = ''
+    direccion.value = ''
+    descripcion_locacion.value = ''
+}
+
+const createLocacion = () => {
+    isLoading.value = true
+
     try {
-        const res = await api.get('/apilocaciones')
-        locaciones.value = [...locaciones.value, ...(res.data || [])]
+        if (validarFormulario()) {
+            error.value = true
+            return
+        }
+        error.value = false
+
+        const res = await api.post('/api/locacion', {
+            nombre_locacion: nombre_locacion.value,
+            direccion: direccion.value,
+            descripcion_locacion: descripcion_locacion.value
+        })
+
+        console.log('Locacion creada con exito')
+        locaciones.value.push(res.data)
+        limpiarCampos()
+        showModal.value = false
     } catch (err) {
-        console.error('Error al obtener las locaciones', err)
+        console.error("Error al crear locacion: ", err)
+    } finally {
+        isLoading.value = false
     }
 }
 
-const crearLocacion = async () => {
+const getLocaciones = () => {
     try {
-        await api.post('/apilocaciones', nuevaLocacion.value)
-        modalNuevaLocacion.value = false
-        nuevaLocacion.value = { nombrelocacion: '', direccion: '', descripcionlocacion: '' }
-        getLocaciones()
+
     } catch (err) {
-        alert('No se pudo crear la locación')
-        console.error(err)
+
+    } finally {
+
     }
 }
-
-onMounted(getLocaciones)
 </script>

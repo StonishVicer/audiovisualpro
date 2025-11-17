@@ -22,9 +22,11 @@ import SystemView from '../views/systemviews/SystemView.vue'
     /*GESTION GASTOS*/ import GestionGastos from '../views/systemviews/finanzas/GestionGastos.vue'
     /*PAGOS PERSONAL*/ import PagosPersonal from '../views/systemviews/finanzas/PagosPersonal.vue'
     /*REPORTES FINANCIEROS*/ import ReportesFinancieros from '../views/systemviews/finanzas/ReportesFinancieros.vue'
+    /*CHAT */ import AdminChat from '../views/systemviews/chat/AdminChat.vue'
 
 //CLIENT VIEWS
 import ClientChat from '../views/clientviews/ClientChat.vue'
+import { compile } from 'vue'
 
 const routes = [
     {
@@ -127,6 +129,11 @@ const routes = [
                 path: '/system/reportesfinancieros',
                 name: 'Reportes Financieros',
                 component: ReportesFinancieros
+            },
+            {
+                path: '/system/chat',
+                name: 'Admin Chat',
+                component: AdminChat
             }
         ]
     }

@@ -1,0 +1,1 @@
+<template>admin chat</template>

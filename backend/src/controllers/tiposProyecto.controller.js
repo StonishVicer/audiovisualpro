@@ -18,6 +18,11 @@ export const getTipoProyectoById = async (req, res) => {
 export const getTiposProyecto = async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM tipos_proyecto ORDER BY id_tipo_proyecto ASC')
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'No se encontraron tipos de proyecto' })
+        }
+
         res.json(result.rows)
     } catch (err) {
         res.status(500).json({ message: 'Error al obtener todos los tipos de proyecto' })
@@ -35,7 +40,7 @@ export const createTipoProyecto = async (req, res) => {
 
         res.status(201).json(result.rows[0])
     } catch (err) {
-        res.status(500).json({ message: err.message })
+        res.status(500).json({ message: err.message || 'Error al crear el tipo de proyecto' })
     }
 }
 
