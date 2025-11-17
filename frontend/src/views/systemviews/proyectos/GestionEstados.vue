@@ -5,7 +5,7 @@ import api from '../../../services/api.js'
 import Toast from '../../../components/Toast.vue';
 import Confirmation from '../../../components/Confirmation.vue'
 
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const loadingEstados = ref(false)
 
 const showConfirmation = ref(false)
@@ -34,7 +34,7 @@ const displayToast = (message, type) => {
 }
 
 const createEstadoProyecto = async () => {
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         const res = await api.post('/api/estadosproyecto', {
@@ -49,7 +49,7 @@ const createEstadoProyecto = async () => {
         err.response ? console.error('Error al crear el estado de proyecto: ', err.response.data) : console.error('Error al crear el estado de proyecto: ', err)
         displayToast('Error al crear estado de proyecto', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -71,7 +71,7 @@ const deleteEstadoProyecto = async () => {
     const id = estadoProyectoDeleteID.value
     showConfirmation.value = false
     if (!id) return
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/estadosproyecto/${id}`)
@@ -81,7 +81,7 @@ const deleteEstadoProyecto = async () => {
         console.error('Error al eliminar el estado de proyecto: ', err)
         displayToast('Error al eliminar estado de proyecto', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
