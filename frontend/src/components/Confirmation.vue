@@ -1,6 +1,4 @@
 <script setup>
-import { defineProps, defineEmits } from 'vue';
-
 const props = defineProps({
     show: { type: Boolean, default: false },
     message: { type: String, default: '¿Está seguro/a que desea realizar esta acción?' },

@@ -48,7 +48,7 @@ const closeModalOnBackdrop = (e) => {
         >
           <div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-3">
             <h2 class="text-xl font-bold text-black">{{ title }}</h2>
-            <button @click="closeModal" class="text-white bg-red-500 p-1 rounded-lg hover:bg-red-600 transition-colors">
+            <button @click="closeModal" class="cursor-pointer text-white bg-red-500 p-1 rounded-lg hover:bg-red-600 transition-colors">
               <Icon icon="mdi:close" width="24" height="24" />
             </button>
           </div>
