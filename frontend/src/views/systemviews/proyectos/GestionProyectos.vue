@@ -6,6 +6,14 @@ import api from '../../../services/api.js'
 import Toast from '../../../components/Toast.vue'
 import Modal from '../../../components/Modal.vue'
 
+//PROYECTOS PAGE VARIABLES
+const proyectos = ref([])
+
+//STATUS
+const error = ref(false)
+const isConnecting = ref(false)
+const loadingProyectos = ref(false)
+
 //CARGAR OPTIONS
 const tiposProyectos = ref([])
 const estadosProyectos = ref([])
@@ -45,6 +53,11 @@ const limpiarCampos = () => {
     presupuesto.value = 0
 }
 
+const validarFormulario = () => {
+    if (!nombre_proyecto.value || id_tipo_proyecto === null || id_estado_proyecto === null || !fechaInicio.value || !fechaFinEstimada.value || presupuesto.value === 0) return true
+    return false
+}
+
 const cargarTiposProyectos = async () => {
     try {
         const res = await api.get('/api/tiposproyecto')
@@ -64,21 +77,55 @@ const cargarEstadosProyectos = async () => {
 }
 
 const createProyecto = async () => {
+    if(validarFormulario()) {
+        error.value = true
+        return
+    }
+    error.value = false
+
+    isConnecting.value = true
+
     try {
+        const res = await api.post('/api/proyectos', {
+            nombre_proyecto: nombre_proyecto.value,
+            id_tipo_proyecto: id_tipo_proyecto.value,
+            id_estado_proyecto: id_estado_proyecto.value,
+            fechaInicio: fechaInicio.value,
+            fechaFinEstimada: fechaFinEstimada.value,
+            presupuesto: presupuesto.value
+        })
+
+        const tipoSeleccionado = tiposProyectos.value.find(tipo => tipo.id_tipo_proyecto === res.data.id_tipo_proyecto)
+        const estadoSeleccionado = estadosProyectos.value.find(estado => estado.id_estado_proyecto === res.data.id_estado_proyecto)
+        const nuevoProyecto = {
+            ...res.data,
+            nombre_tipo: tipoSeleccionado ? tipoSeleccionado.nombre_tipo : 'Tipo desconocido',
+            nombre_estado: estadoSeleccionado ? estadoSeleccionado.nombre_estado : 'Estado desconocido'
+        }
+
+        console.log('Nuevo proyecto creado: ', nuevoProyecto)
+        proyectos.value.push(nuevoProyecto)
+        limpiarCampos()
         showModal.value = false
-        console.log('Proyecto creado')
         displayToast('Proyecto creado', 'success')
     } catch (err) {
         console.log('Error al crear el proyecto: ', err)
         displayToast('Error al crear el proyecto', 'error')
+    } finally {
+        isConnecting.value = false
     }
 }
 
 const getProyectos = async () => {
+    loadingProyectos.value = true
+
     try {
-        console.log('Proyectos cargados')
+        const res = await api.get('/api/proyectos')
+        proyectos.value = res.data
     } catch (err) {
         console.log('Error al cargar los proyectos: ', err)
+    } finally {
+        loadingProyectos.value = false
     }
 }
 
@@ -93,6 +140,7 @@ const deleteProyecto = async () => {
 onMounted(() => {
     cargarTiposProyectos()
     cargarEstadosProyectos()
+    getProyectos()
 })
 </script>
 
@@ -132,8 +180,26 @@ onMounted(() => {
 
         <div class="flex-1 overflow-y-auto p-3 border border-gray-200 rounded-lg min-h-[400px] max-h-[calc(100vh-240px)]">
             <div class="grid grid-cols-2 gap-3">
-                <div v-for="array in arrayTest">
-                    <Proyecto />
+                <div v-if="loadingProyectos">
+                    <div class="flex items-center justify-center text-center mt-3">
+                        <div class="flex text-[15px] font-semibold text-blue-500 items-center justify-center w-full bg-blue-100 border border-blue-200 p-3 mx-3 rounded-xl shadow-md">
+                            <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                            Cargando proyectos...
+                        </div>
+                    </div>
+                </div>
+                <div v-else-if="proyectos.length > 0">
+                    <div v-for="proyecto in proyectos">
+                        <Proyecto />
+                    </div>
+                </div>
+                <div v-else>
+                    <div class="flex items-center justify-center text-center mt-3">
+                        <div class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                            <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                            No hay proyectos creados.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -143,7 +209,7 @@ onMounted(() => {
             title="Nuevo Proyecto"
         >
             <div>
-                <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mb-2 rounded-xl shadow-md">
                     <Icon icon="mdi:error" width="25" heigth="25" class="mr-2" />
                     Complete todos los campos.
                 </div>
