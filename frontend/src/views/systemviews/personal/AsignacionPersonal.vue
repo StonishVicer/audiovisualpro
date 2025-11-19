@@ -1,25 +1,28 @@
 <template>
     <div class="h-screen flex flex-col">
-        <div class="border-b border-gray-200 pb-3 mb-4">
-            <h3 class="text-center font-bold text-lg">Asignación de Personal a Proyecto</h3>
+        <!-- HEADER CON BOTÓN SIEMPRE VISIBLE -->
+        <div class="border-b border-gray-200 pb-3 mb-4 flex items-center justify-between px-2">
+            <h3 class="font-bold text-lg">Asignación de Personal a Proyecto</h3>
+            <button
+                class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold px-3 py-2 rounded-lg transition-colors text-sm"
+                @click="abrirNuevaAsignacion">
+                <Icon icon="material-symbols:add" width="20" height="20" class="mr-1" /> Nueva Asignación
+            </button>
         </div>
 
         <!-- LISTA DE ASIGNACIONES -->
         <div class="flex-1 overflow-y-auto p-2">
             <div class="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                <!-- Estado vacío -->
                 <div v-if="asignaciones.length === 0"
                     class="bg-white border-dashed border-2 rounded-xl px-5 py-6 flex flex-col items-center justify-center text-gray-500"
                     style="min-width:290px;">
                     <Icon icon="material-symbols:work-history" width="40" height="40" class="mb-2 text-green-600" />
                     <p class="font-semibold mb-1">No hay asignaciones registradas</p>
-                    <p class="text-sm mb-3 text-center">Haz clic en "Nueva Asignación" para comenzar.</p>
-                    <button
-                        class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
-                        @click="abrirNuevaAsignacion">
-                        <Icon icon="material-symbols:add" width="22" height="22" class="mr-1" /> Nueva Asignación
-                    </button>
+                    <p class="text-sm mb-1 text-center">Haz clic en "Nueva Asignación" en la parte superior.</p>
                 </div>
 
+                <!-- Tarjetas de asignaciones -->
                 <div v-for="asignacion in asignaciones" :key="asignacion.id_asignacion"
                     class="bg-white border rounded-xl shadow px-5 py-4 flex flex-col justify-between"
                     style="min-width:290px;">
@@ -66,15 +69,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- BOTÓN NUEVA ASIGNACIÓN -->
-        <div class="flex justify-end mt-4 px-2 pb-3">
-            <button
-                class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors"
-                @click="abrirNuevaAsignacion">
-                <Icon icon="material-symbols:add" width="25" height="25" class="mr-2" /> Nueva Asignación
-            </button>
         </div>
 
         <!-- MODAL NUEVA / EDITAR ASIGNACIÓN -->
@@ -231,12 +225,10 @@ const agregarAsignacion = async () => {
 
     try {
         if (esEdicion.value) {
-            // UPDATE
             const { data } = await api.put(`/api/asignaciones/${asignacionEditandoId.value}`, payload)
             const idx = asignaciones.value.findIndex(a => a.id_asignacion === asignacionEditandoId.value)
             if (idx !== -1) asignaciones.value[idx] = data
         } else {
-            // CREATE
             const { data } = await api.post('/api/asignaciones', payload)
             asignaciones.value.push(data)
         }
