@@ -8,43 +8,70 @@ const props = defineProps({
     fechaInicio: { type: String, required: true, default: '' },
     fechaFinEstimada: { type: String, required: true, default: ''},
     presupuesto: { type: Number, required: true, default: 0 },
-    locacion: { type: String, required: true, default: 'Locacion del Proyecto' },
+    locaciones: { type: Array, required: false, default: () => [] },
 })
 
+const emit = defineEmits(['verDetalles', 'editar', 'eliminar'])
+
 const eliminarProyecto = () => {
-    console.log("Eliminar proyecto")
+    emit('eliminar')
 }
 
 const editarProyecto = () => {
-    console.log("Editar proyecto")
+    emit('editar')
 }
 
 const verDetalles = () => {
-    console.log("Ver detalles del proyecto")
+    emit('verDetalles')
 }
 </script>
 
 <template>
-    <div class="bg-white rounded-xl shadow-lg p-3 border border-green-100 hover:border-green-500 transition">
+    <div class="bg-white rounded-xl shadow-lg p-3 border border-green-100 hover:border-green-500 transition h-full flex flex-col justify-between">
         <div class="mb-3">
             <div class="flex-col">
                 <h3 class="font-semibold text-lg">{{ nombreProyecto }}</h3>
-                <div class="text-sm text-gray-500">
+                <div class="text-sm text-gray-500 space-y-1">
                     <p><span class="font-semibold">Tipo:</span> {{ tipoProyecto }}</p>
                     <p><span class="font-semibold">Estado:</span> {{ estadoProyecto }}</p>
-                    <p><span class="font-semibold">Fecha de inicio:</span> {{ fechaInicio }}</p>
-                    <p><span class="font-semibold">Fecha de finalizacion estimada:</span> {{ fechaFinEstimada }}</p>
+                    <p><span class="font-semibold">Inicio:</span> {{ fechaInicio }}</p>
+                    <p><span class="font-semibold">Fin Estimado:</span> {{ fechaFinEstimada }}</p>
                     <p>
                         <span class="font-semibold">Presupuesto: </span>
                         <span class="text-green-500 font-semibold">
                             Bs. {{ presupuesto }} 
                         </span>
                     </p>
-                    <p><span class="font-semibold">Locacion:</span> {{ locacion }}</p>
+
+                    <div class="pt-1">
+                        <span class="font-semibold block mb-1">Locaciones:</span>
+                        <div class="flex flex-wrap gap-1">
+                            <template v-if="locaciones && locaciones.length > 0">
+                                <span 
+                                    v-for="(loc, index) in locaciones" 
+                                    :key="index"
+                                    class="text-green-700 bg-green-100 px-2 py-0.5 rounded text-xs font-bold flex items-center border border-green-200"
+                                >
+                                    <Icon icon="material-symbols:location-on" class="mr-1"/>
+                                    {{ loc }}
+                                </span>
+                            </template>
+                            
+                            <span 
+                                v-else 
+                                class="text-red-600 bg-red-100 px-2 py-0.5 rounded text-xs font-bold flex items-center border border-red-200"
+                            >
+                                <Icon icon="material-symbols:warning-outline" class="mr-1"/>
+                                Sin Asignar
+                            </span>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </div>
-        <div class="grid grid-cols-2 gap-2 font-semibold">
+        
+        <div class="grid grid-cols-2 gap-2 font-semibold mt-2">
             <button @click="editarProyecto" class="items-center text-center flex justify-center bg-blue-500 rounded-lg text-white p-1 cursor-pointer hover:bg-blue-600 transition">
                 <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" />
                 Editar

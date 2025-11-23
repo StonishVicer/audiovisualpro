@@ -62,6 +62,7 @@
 
         <Modal
             v-if="showModal" :show="showModal" @close="showModal = false"
+            size="sm"
             title="Nuevo Recurso Tecnico"
         >
             <div>

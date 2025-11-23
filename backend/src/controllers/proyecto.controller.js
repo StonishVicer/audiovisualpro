@@ -12,26 +12,46 @@ export const getProyectos = async (req, res) => {
     try {
         const result = await pool.query(
             `
-            SELECT
-            pr.id_proyecto,
-            pr.nombre_proyecto,
-            tp.id_tipo_proyecto,
-            ep.id_estado_proyecto,
-            pr.fecha_inicio,
-            pr.fecha_fin_estimada,
-            pr.presupuesto
+            SELECT 
+                pr.id_proyecto,
+                pr.nombre_proyecto,
+                tp.id_tipo_proyecto,
+                ep.id_estado_proyecto,
+                tp.nombre_tipo,
+                ep.nombre_estado,
+                pr.fecha_inicio,
+                pr.fecha_fin_estimada,
+                pr.presupuesto,
+                COALESCE(
+                    JSON_AGG(l.nombre_locacion) FILTER (WHERE l.nombre_locacion IS NOT NULL), 
+                    '[]'
+                ) as lista_locaciones
             FROM proyectos pr
             LEFT JOIN tipos_proyecto tp ON pr.id_tipo_proyecto = tp.id_tipo_proyecto
             LEFT JOIN estados_proyecto ep ON pr.id_estado_proyecto = ep.id_estado_proyecto
-            ORDER BY pr.id_proyecto ASC
+            LEFT JOIN proyecto_locaciones pl ON pr.id_proyecto = pl.id_proyecto
+            LEFT JOIN locaciones l ON pl.id_locacion = l.id_locacion
+                
+            GROUP BY 
+                pr.id_proyecto, 
+                pr.nombre_proyecto, 
+                tp.id_tipo_proyecto, 
+                ep.id_estado_proyecto, 
+                tp.nombre_tipo, 
+                ep.nombre_estado, 
+                pr.fecha_inicio, 
+                pr.fecha_fin_estimada, 
+                pr.presupuesto
+            
+            ORDER BY pr.id_proyecto DESC -- Puse DESC para que el nuevo salga primero
             `
         )
 
         if (result.rows.length === 0) {
-            res.status(404).json({ message: 'No hay proyectos creados' })
+             return res.status(200).json([]) 
         }
 
-        res.status(result.rows)
+        res.status(200).json(result.rows)
     } catch (err) {
         res.status(500).json({ message: 'Error al obtener proyectos' })
     }

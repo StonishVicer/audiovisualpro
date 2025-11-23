@@ -217,6 +217,7 @@ onMounted(() => {
 
         <Modal
             v-if="showModal" :show="showModal" @close="showModal = false"
+            size="sm"
             title="Nuevo Cliente"
         >
             <div>

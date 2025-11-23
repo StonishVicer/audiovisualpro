@@ -63,6 +63,7 @@
 
         <Modal
             v-if="showModal" :show="showModal" @close="showModal = false"
+            size="sm"
             title="Nueva Locacion"
         >
             <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">

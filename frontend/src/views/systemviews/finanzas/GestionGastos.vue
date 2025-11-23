@@ -58,7 +58,7 @@
       <div v-else class="text-center text-gray-600 p-6">No hay gastos registrados.</div>
     </div>
 
-    <Modal v-if="showModal" :show="showModal" @close="closeModal" :title="isEditing ? 'Editar Gasto' : 'Nuevo Gasto'">
+    <Modal size="sm" v-if="showModal" :show="showModal" @close="closeModal" :title="isEditing ? 'Editar Gasto' : 'Nuevo Gasto'">
       <div>
         <div v-if="error" class="mb-3 p-3 bg-red-100 text-red-700 rounded">Complete los campos requeridos.</div>
 
