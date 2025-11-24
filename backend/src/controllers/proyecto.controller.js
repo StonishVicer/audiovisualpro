@@ -95,3 +95,34 @@ export const asignarLocacion = async (req, res) => {
         res.status(500).json({ message: 'Error al asignar una locacion al proyecto' })
     }
 }
+
+export const desasignarLocacion = async (req, res) => {
+    try {
+        const { idProyecto, idLocacion } = req.params
+
+        const result = await pool.query(
+            'DELETE FROM proyecto_locaciones WHERE id_proyecto = $1 AND id_locacion = $2 RETURNING *',
+            [idProyecto, idLocacion]
+        )
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'La asignacion de locacion no fue encontrada' })
+        }
+
+        res.status(200).json({ message: 'Locacion desasignada del proyecto' })
+    } catch (err) {
+        console.error("Error en desasignar locacion:", err);
+        res.status(500).json({ message: 'Error al desasignar una locacion del proyecto' })
+    }
+}
+
+export const asignarRecurso = async (req, res) => {
+    try {
+        const { id_proyecto, id_recurso, fecha_inicio_uso, fecha_fin_uso } = req.body
+
+        
+    } catch (err) {
+        console.error('Error al asignar recurso tecnico');
+        res.status(500).json({ message: 'Error al asignar un recurso tecnico a un proyecto' })
+    }
+}

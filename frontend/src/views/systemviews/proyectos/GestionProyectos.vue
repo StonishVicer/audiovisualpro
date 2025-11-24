@@ -1,6 +1,6 @@
 <script setup>
 import { Icon } from '@iconify/vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Proyecto from '../../../components/Proyecto.vue'
 import api from '../../../services/api.js'
 import Toast from '../../../components/Toast.vue'
@@ -77,6 +77,14 @@ const limpiarCampos = () => {
     presupuesto.value = 0
 }
 
+const minFechaFin = computed(() => {
+    const hoy = new Date()
+    const year = hoy.getFullYear()
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0')
+    const dia = String(hoy.getDate()).padStart(2, '0')
+    return `${year}-${mes}-${dia}`
+})
+
 const validarFormulario = () => {
     if (!nombre_proyecto.value || id_tipo_proyecto === null || id_estado_proyecto === null || !fechaInicio.value || !fechaFinEstimada.value || presupuesto.value === 0) return true
     return false
@@ -119,6 +127,41 @@ const asignarLocacion = async () => {
         displayToast('Error al asignar la locacion', 'error')
     } finally {
         loadingLoc.value = false
+    }
+}
+
+const desasignarLocacion = async (nombreLocacion) => {
+    const locADesasignar = locDisponibles.value.find(l => l.nombre_locacion === nombreLocacion)
+
+    if (!locADesasignar) {
+        displayToast('Error: ID de locacion no encontrada', 'error')
+        return
+    }
+
+    if(!confirm(`Esta seguro/a que desea desasignar la locacion ${nombreLocacion} del proyecto ${proyectoSeleccionado.value.nombre_proyecto}?`)) {
+        return
+    }
+
+    const id_proyecto = proyectoSeleccionado.value.id_proyecto
+    const id_locacion = locADesasignar.id_locacion
+
+    try {
+        const res = await api.delete(`/api/proyectos/desasignarlocacion/${id_proyecto}/${id_locacion}`)
+
+        const index = proyectoSeleccionado.value.lista_locaciones.findIndex(loc => loc === nombreLocacion)
+        if (index > -1) {
+            proyectoSeleccionado.value.lista_locaciones.splice(index, 1)
+        }
+
+        const mensaje = res.data && res.data.message ? res.data.message : 'Locacion desasignada'
+
+        displayToast(mensaje, 'success')
+    } catch (err) {
+        console.error('Error al desasignar la locacion:', err.response || err);
+        const errorMessage = err.response
+            ? err.response.data.message || 'Error desconocido del servidor al desasignar.'
+            : 'Error de conexión con la API.';
+        displayToast(errorMessage, 'error')
     }
 }
 
@@ -319,7 +362,7 @@ onMounted(() => {
                             </div>
                             <div class="mb-2">
                                 <label class="text-sm font-semibold text-gray-500 mb-1">Fin (Estimado)</label>
-                                <input type="date" v-model="fechaFinEstimada" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
+                                <input type="date" :min="minFechaFin" v-model="fechaFinEstimada" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
                             </div>
                         </div>
 
@@ -410,7 +453,14 @@ onMounted(() => {
                                     class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 flex items-center gap-2 font-medium text-sm"
                                 >
                                     <Icon icon="mdi:map-marker" class="w-4 h-4"/>
-                                    {{ loc }}
+                                    <span>{{ loc }}</span>
+                                    <button
+                                        @click="desasignarLocacion(loc)"
+                                        title="Desasignar locacion"
+                                        class="cursor-pointer ml-1 text-red-500 hover:text-red-700 p-0.5 rounded-full hover:bg-white transition"
+                                    >
+                                        <Icon icon="mdi:close-circle" class="w-4 h-4" />
+                                    </button>
                                 </span>
                             </template>
 
@@ -446,7 +496,7 @@ onMounted(() => {
                                         class="bg-green-600 cursor-pointer text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                                     >
                                         <Icon v-if="loadingLoc" icon="mdi:loading" class="animate-spin w-4 h-4"/>
-                                        <Icon icon="fluent-mdl2:accept-medium" height="15" width="15" class="my-2" />
+                                        <Icon v-else icon="fluent-mdl2:accept-medium" height="15" width="15" class="my-2" />
                                     </button>
 
                                     <button
