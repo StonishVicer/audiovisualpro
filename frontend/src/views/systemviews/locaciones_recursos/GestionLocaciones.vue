@@ -242,7 +242,11 @@ const deleteLocaciones = async () => {
         displayToast('Locacion eliminada', 'success')
     } catch (err) {
         console.error('Error al eliminar la locacion: ', err)
-        displayToast('Error al eliminar locacion', 'error')
+        if(err.response && err.response.status === 409) {
+            displayToast(err.response.data.message, 'error')
+        } else {
+            displayToast('Error al eliminar. Intentelo denuevo.', 'error')
+        }
     } finally {
         isConnecting.value = false
     }

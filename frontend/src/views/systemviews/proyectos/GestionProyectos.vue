@@ -26,8 +26,15 @@ const fechaInicio = ref('')
 const fechaFinEstimada = ref('')
 const presupuesto = ref(0)
 
+//MODAL DETALLES DE PROYECTO
 const showModalDetalles = ref(false)
 const proyectoSeleccionado = ref({})
+
+//ASIGNACION DE LOCACION
+const locDisponibles = ref([])
+const idLocSeleccionada = ref(null)
+const mostrarFormAsignacion = ref(false)
+const loadingLoc = ref(false)
 
 //TOAST
 const showToast = ref(false)
@@ -53,11 +60,11 @@ const abrirDetalles = (proyecto) => {
 const formatearFecha = (fecha) => {
     if (!fecha) return 'No definida'
     const date = new Date(fecha)
-    return date.toLocaleDateString('es-ES', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+    return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     })
 }
 
@@ -73,6 +80,46 @@ const limpiarCampos = () => {
 const validarFormulario = () => {
     if (!nombre_proyecto.value || id_tipo_proyecto === null || id_estado_proyecto === null || !fechaInicio.value || !fechaFinEstimada.value || presupuesto.value === 0) return true
     return false
+}
+
+const cargarLocaciones = async () => {
+    try {
+        const res = await api.get('/api/locacion')
+        locDisponibles.value = res.data
+    } catch (err) {
+        console.log('Error al cargar las locaciones: ', err)
+    }
+}
+
+const asignarLocacion = async () => {
+    if (!idLocSeleccionada.value) return
+
+    loadingLoc.value = true
+    try {
+        await api.post('/api/proyectos/asignarlocacion', {
+            id_proyecto: proyectoSeleccionado.value.id_proyecto,
+            id_locacion: idLocSeleccionada.value
+        })
+
+        const locEncontrada = locDisponibles.value.find(l => l.id_locacion === idLocSeleccionada.value)
+
+        if (!Array.isArray(proyectoSeleccionado.value.lista_locaciones)) {
+            proyectoSeleccionado.value.lista_locaciones = []
+        }
+
+        if (locEncontrada) {
+            proyectoSeleccionado.value.lista_locaciones.push(locEncontrada.nombre_locacion)
+        }
+
+        displayToast('Locacion asignada', 'success')
+        mostrarFormAsignacion.value = false
+        idLocSeleccionada.value = null
+    } catch (err) {
+        console.log('Error al asignar la locacion');
+        displayToast('Error al asignar la locacion', 'error')
+    } finally {
+        loadingLoc.value = false
+    }
 }
 
 const cargarTiposProyectos = async () => {
@@ -113,7 +160,7 @@ const createProyecto = async () => {
 
         const tipoSeleccionado = tiposProyectos.value.find(tipo => tipo.id_tipo_proyecto === res.data.id_tipo_proyecto)
         const estadoSeleccionado = estadosProyectos.value.find(estado => estado.id_estado_proyecto === res.data.id_estado_proyecto)
-        
+
         const nuevoProyecto = {
             ...res.data,
             // Asignamos nombres para que la UI se vea bien sin recargar
@@ -159,6 +206,7 @@ onMounted(() => {
     cargarTiposProyectos()
     cargarEstadosProyectos()
     getProyectos()
+    cargarLocaciones()
 })
 </script>
 
@@ -211,11 +259,12 @@ onMounted(() => {
                         <div v-for="proyecto in proyectos_list" :key="proyecto.id_proyecto">
                             <Proyecto
                                 :nombreProyecto="proyecto.nombre_proyecto"
-                                :tipoProyecto="proyecto.nombre_tipo || proyecto.id_tipo_proyecto" 
+                                :tipoProyecto="proyecto.nombre_tipo || proyecto.id_tipo_proyecto"
                                 :estadoProyecto="proyecto.nombre_estado || proyecto.id_estado_proyecto"
                                 :fechaInicio="formatearFecha(proyecto.fecha_inicio)"
                                 :fechaFinEstimada="formatearFecha(proyecto.fecha_fin_estimada)"
                                 :presupuesto="proyecto.presupuesto"
+                                :locacionesAsignadas="proyecto.lista_locaciones"
                                 @verDetalles="abrirDetalles(proyecto)"
                             />
                         </div>
@@ -273,7 +322,7 @@ onMounted(() => {
                                 <input type="date" v-model="fechaFinEstimada" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
                             </div>
                         </div>
-                       
+
                         <div class="mb-2">
                             <label class="text-sm font-semibold text-gray-500 mb-1">
                                 Presupuesto:
@@ -293,10 +342,10 @@ onMounted(() => {
             </div>
         </Modal>
 
-        <Modal 
-            v-if="showModalDetalles" 
-            :show="showModalDetalles" 
-            title="Detalles del Proyecto" 
+        <Modal
+            v-if="showModalDetalles"
+            :show="showModalDetalles"
+            title="Detalles del Proyecto"
             size="xl"
             @close="showModalDetalles = false"
         >
@@ -332,7 +381,7 @@ onMounted(() => {
                             <p><span class="text-gray-400">Inicio:</span> {{ formatearFecha(proyectoSeleccionado.fecha_inicio) }}</p>
                             <p><span class="text-gray-400">Fin Est:</span> {{ formatearFecha(proyectoSeleccionado.fecha_fin_estimada) }}</p>
                             <p class="pt-2">
-                                <span class="text-gray-400">Presupuesto:</span> 
+                                <span class="text-gray-400">Presupuesto:</span>
                                 <span class="text-xl font-bold text-green-600 block">Bs. {{ proyectoSeleccionado.presupuesto }}</span>
                             </p>
                         </div>
@@ -341,30 +390,84 @@ onMounted(() => {
 
                 <div class="mt-4 grid grid-cols-3 gap-4">
                     <div>
-                        <h4 class="font-semibold text-gray-700 border-b pb-2 mb-3">Locaciones Asignadas</h4>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex justify-between items-center border-b pb-2 mb-3">
+                            <h4 class="font-semibold text-gray-700">Locaciones Asignadas</h4>
+
+                            <button
+                                v-if="!mostrarFormAsignacion"
+                                @click="mostrarFormAsignacion = true"
+                                class="cursor-pointer text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100 transition flex items-center gap-1"
+                            >
+                                <Icon icon="mdi:plus" class="w-4 h-4" /> Asignar Nueva
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-3">
                             <template v-if="proyectoSeleccionado.lista_locaciones && proyectoSeleccionado.lista_locaciones.length > 0">
-                                <span 
-                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones" 
+                                <span
+                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones"
                                     :key="index"
-                                    class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 flex items-center gap-2 font-medium"
+                                    class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 flex items-center gap-2 font-medium text-sm"
                                 >
-                                    <Icon icon="mdi:map-marker" />
+                                    <Icon icon="mdi:map-marker" class="w-4 h-4"/>
                                     {{ loc }}
                                 </span>
                             </template>
-                            <div v-else class="text-gray-400 italic flex items-center gap-2 bg-gray-50 p-3 rounded w-full justify-center">
-                                <Icon icon="mdi:map-marker-off" />
-                                No hay locaciones asignadas
+
+                            <div v-else-if="!mostrarFormAsignacion" class="text-gray-400 italic text-sm flex items-center gap-2 bg-gray-50 p-2 rounded w-full">
+                                <Icon icon="mdi:map-marker-off" class="w-4 h-4"/>
+                                No hay locaciones asignadas actualmente.
                             </div>
                         </div>
+
+                        <transition name="fade">
+                            <div v-if="mostrarFormAsignacion" class="bg-green-50/50 p-3 rounded-lg border border-green-100 mt-2">
+                                <p class="text-xs font-bold text-green-800 mb-2 uppercase">Seleccionar Locación</p>
+
+                                <div class="flex gap-2 items-center">
+                                    <select
+                                        v-model="idLocSeleccionada"
+                                        class="flex-1 border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none bg-white"
+                                        :disabled="loadingLocacion"
+                                    >
+                                        <option :value="null" disabled>Seleccione una locacion</option>
+                                        <option
+                                            v-for="loc in locDisponibles"
+                                            :key="loc.id_locacion"
+                                            :value="loc.id_locacion"
+                                        >
+                                            {{ loc.nombre_locacion }}
+                                        </option>
+                                    </select>
+
+                                    <button
+                                        @click="asignarLocacion"
+                                        :disabled="loadingLoc || !idLocSeleccionada || locDisponibles.length === 0"
+                                        class="bg-green-600 cursor-pointer text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                    >
+                                        <Icon v-if="loadingLoc" icon="mdi:loading" class="animate-spin w-4 h-4"/>
+                                        <Icon icon="fluent-mdl2:accept-medium" height="15" width="15" class="my-2" />
+                                    </button>
+
+                                    <button
+                                        @click="mostrarFormAsignacion = false"
+                                        :disabled="loadingLoc"
+                                        class="cursor-pointer bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition disabled:opacity-50"
+                                    >
+                                        <Icon icon="heroicons:x-mark-20-solid" height="15" width="15" class="my-2" />
+                                    </button>
+                                </div>
+                                <p v-if="locDisponibles.length === 0" class="text-xs text-red-600 mt-1">No hay locaciones disponibles para asignar.</p>
+                            </div>
+                        </transition>
                     </div>
+
                     <div>
                         <h4 class="font-semibold text-gray-700 border-b pb-2 mb-3">Recursos Asignados</h4>
                         <div class="flex flex-wrap gap-2">
                             <template v-if="proyectoSeleccionado.lista_locaciones && proyectoSeleccionado.lista_locaciones.length > 0">
-                                <span 
-                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones" 
+                                <span
+                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones"
                                     :key="index"
                                     class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 flex items-center gap-2 font-medium"
                                 >
@@ -382,8 +485,8 @@ onMounted(() => {
                         <h4 class="font-semibold text-gray-700 border-b pb-2 mb-3">Personal Asignado</h4>
                         <div class="flex flex-wrap gap-2">
                             <template v-if="proyectoSeleccionado.lista_locaciones && proyectoSeleccionado.lista_locaciones.length > 0">
-                                <span 
-                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones" 
+                                <span
+                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones"
                                     :key="index"
                                     class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 flex items-center gap-2 font-medium"
                                 >

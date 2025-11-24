@@ -12,7 +12,7 @@ export const getProyectos = async (req, res) => {
     try {
         const result = await pool.query(
             `
-            SELECT 
+            SELECT
                 pr.id_proyecto,
                 pr.nombre_proyecto,
                 tp.id_tipo_proyecto,
@@ -23,7 +23,7 @@ export const getProyectos = async (req, res) => {
                 pr.fecha_fin_estimada,
                 pr.presupuesto,
                 COALESCE(
-                    JSON_AGG(l.nombre_locacion) FILTER (WHERE l.nombre_locacion IS NOT NULL), 
+                    JSON_AGG(l.nombre_locacion) FILTER (WHERE l.nombre_locacion IS NOT NULL),
                     '[]'
                 ) as lista_locaciones
             FROM proyectos pr
@@ -31,24 +31,24 @@ export const getProyectos = async (req, res) => {
             LEFT JOIN estados_proyecto ep ON pr.id_estado_proyecto = ep.id_estado_proyecto
             LEFT JOIN proyecto_locaciones pl ON pr.id_proyecto = pl.id_proyecto
             LEFT JOIN locaciones l ON pl.id_locacion = l.id_locacion
-                
-            GROUP BY 
-                pr.id_proyecto, 
-                pr.nombre_proyecto, 
-                tp.id_tipo_proyecto, 
-                ep.id_estado_proyecto, 
-                tp.nombre_tipo, 
-                ep.nombre_estado, 
-                pr.fecha_inicio, 
-                pr.fecha_fin_estimada, 
+
+            GROUP BY
+                pr.id_proyecto,
+                pr.nombre_proyecto,
+                tp.id_tipo_proyecto,
+                ep.id_estado_proyecto,
+                tp.nombre_tipo,
+                ep.nombre_estado,
+                pr.fecha_inicio,
+                pr.fecha_fin_estimada,
                 pr.presupuesto
-            
+
             ORDER BY pr.id_proyecto DESC -- Puse DESC para que el nuevo salga primero
             `
         )
 
         if (result.rows.length === 0) {
-             return res.status(200).json([]) 
+             return res.status(200).json([])
         }
 
         res.status(200).json(result.rows)
@@ -78,5 +78,20 @@ export const deleteProyecto = async (req, res) => {
 
     } catch (err) {
         res.status(500).json({ message: 'Error al eliminar proyectos' })
+    }
+}
+
+export const asignarLocacion = async (req, res) => {
+    try {
+        const { id_proyecto, id_locacion } = req.body
+
+        await pool.query(
+            'INSERT INTO proyecto_locaciones (id_proyecto, id_locacion) VALUES ($1, $2)',
+            [id_proyecto, id_locacion]
+        )
+
+        res.status(200).json({ message: 'Locacion asignada correctamente' })
+    } catch (err) {
+        res.status(500).json({ message: 'Error al asignar una locacion al proyecto' })
     }
 }
