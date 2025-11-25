@@ -8,7 +8,8 @@ const props = defineProps({
     fechaInicio: { type: String, required: true, default: '' },
     fechaFinEstimada: { type: String, required: true, default: ''},
     presupuesto: { type: Number, required: true, default: 0 },
-    locacionesAsignadas: { type: Array, required: false, default: () => [] }
+    locacionesAsignadas: { type: Array, required: false, default: () => [] },
+    recursosAsignados: { type: Array, required: false, default: () => [] }
 })
 
 const emit = defineEmits(['verDetalles', 'editar', 'eliminar'])
@@ -46,10 +47,10 @@ const verDetalles = () => {
                     <hr class="my-2 border-gray-100">
 
                     <div class="text-sm mt-2">
-                        <p class="font-bold text-gray-700 mb-1">Detalles:</p>
+                        <p class="font-bold text-gray-700 mb-1">Estado:</p>
 
                         <div
-                            v-if="locacionesAsignadas && locacionesAsignadas.length > 0"
+                            v-if="locacionesAsignadas?.length > 0 && recursosAsignados?.length > 0"
                             class="flex items-center gap-1 p-2 rounded bg-green-100 text-green-700 text-sm font-medium"
                         >
                             <Icon icon="mdi:check-circle-outline" width="18" height="18" />
@@ -62,11 +63,14 @@ const verDetalles = () => {
                         >
                             <div class="flex items-center font-bold">
                                 <Icon icon="mdi:alert-circle-outline" width="18" height="18" class="mr-1" />
-                                Faltan:
+                                Detalles:
                             </div>
                             <ul class="list-disc list-inside ml-2 text-xs">
-                                <li>Asignar al menos una locación.</li>
+                                <li v-if="locacionesAsignadas?.length === 0">Asignar al menos una locación.</li>
+
+                                <li v-if="recursosAsignados?.length === 0">Asignar al menos un recurso técnico.</li>
                             </ul>
+                            <p class="font-bold">Vaya a 'Ver Detalles' para asi poder asignarlos.</p>
                         </div>
                     </div>
                 </div>

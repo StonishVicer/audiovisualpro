@@ -36,6 +36,14 @@ const idLocSeleccionada = ref(null)
 const mostrarFormAsignacion = ref(false)
 const loadingLoc = ref(false)
 
+//ASIGNACION DE RECURSOS TECNICOS
+const mostrarFormAsigRecurso = ref(false)
+const recDisponibles = ref([])
+const loadingRec = ref(false)
+const idRecSeleccionado = ref(null)
+const fechaInicioRec = ref('')
+const fechaFinRec = ref('')
+
 //TOAST
 const showToast = ref(false)
 const toastMessage = ref('')
@@ -55,6 +63,17 @@ const showModal = ref(false)
 const abrirDetalles = (proyecto) => {
     proyectoSeleccionado.value = proyecto
     showModalDetalles.value = true
+}
+
+const formatearFechaDos = (fecha) => {
+    if (!fecha) return 'No definida'
+    const date = new Date(fecha)
+    const opciones = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }
+    return date.toLocaleDateString('es-ES', opciones)
 }
 
 const formatearFecha = (fecha) => {
@@ -96,6 +115,88 @@ const cargarLocaciones = async () => {
         locDisponibles.value = res.data
     } catch (err) {
         console.log('Error al cargar las locaciones: ', err)
+    }
+}
+
+const cargarRecTecnicos = async () => {
+    loadingRec.value = true
+    try {
+        const res = await api.get('/api/recursostecnicos')
+        recDisponibles.value = res.data
+    } catch (err) {
+        console.log('Error al cargar los recursos tecnicos: ', err)
+    } finally {
+        loadingRec.value = false
+    }
+}
+
+const asignarRecursoTecnico = async () => {
+    if (!idRecSeleccionado.value || !fechaInicioRec.value || !fechaFinRec.value) {
+        displayToast('Debe de seleccionar un recurso tecnico y asignar las fechas de inicio y fin', 'error')
+        return
+    }
+
+    const payload = {
+        id_recurso: idRecSeleccionado.value,
+        id_proyecto: proyectoSeleccionado.value.id_proyecto,
+        fecha_inicio_uso: fechaInicioRec.value,
+        fecha_fin_uso: fechaFinRec.value,
+    }
+
+    loadingRec.value = true
+
+    try {
+        const res = await api.post('/api/proyectos/asignarrecurso', payload)
+
+        const recursoDetalle = recDisponibles.value.find(r => r.id_recurso === idRecSeleccionado.value)
+
+        if (recursoDetalle && proyectoSeleccionado.value.recursos_asignados) {
+            proyectoSeleccionado.value.recursos_asignados.push({
+                id_recurso: idRecSeleccionado.value,
+                nombre_recurso: recursoDetalle.nombre_equipo,
+                fecha_inicio_uso: fechaInicioRec.value,
+                fecha_fin_uso: fechaFinRec.value,
+            })
+        }
+
+        idRecSeleccionado.value = null
+        fechaInicioRec.value = ''
+        fechaFinRec.value = ''
+        mostrarFormAsigRecurso.value = false
+
+        displayToast(res.data.message, 'success')
+    } catch (err) {
+        const mensaje = err.response?.data?.message || 'Error al asignar el recurso tecnico'
+        displayToast(mensaje, 'error')
+    } finally {
+        loadingRec.value = false
+    }
+}
+
+const desasignarRecursoTecnico = async (idRecurso, nombreRecurso) => {
+    if (!confirm(`Esta seguro/a que desea desasignar el recurso ${nombreRecurso}?`)) {
+        return
+    }
+
+    const id_proyecto = proyectoSeleccionado.value.id_proyecto
+
+    loadingRec.value = true
+
+    try {
+        await api.delete(`/api/proyectos/desasignarrecurso/${id_proyecto}/${idRecurso}`)
+
+        const index = proyectoSeleccionado.value.recursos_asignados.findIndex(r => r.id_recurso === idRecurso)
+
+        if (index > -1) {
+            proyectoSeleccionado.value.recursos_asignados.splice(index, 1)
+        }
+
+        displayToast('Recurso desasignado del proyecto', 'success')
+    } catch (err) {
+        const mensaje = err.response?.data?.message || 'Error al desasignar recurso tecnico del proyecto'
+        displayToast(mensaje, 'error')
+    } finally {
+        loadingRec.value = false
     }
 }
 
@@ -250,6 +351,7 @@ onMounted(() => {
     cargarEstadosProyectos()
     getProyectos()
     cargarLocaciones()
+    cargarRecTecnicos()
 })
 </script>
 
@@ -308,6 +410,7 @@ onMounted(() => {
                                 :fechaFinEstimada="formatearFecha(proyecto.fecha_fin_estimada)"
                                 :presupuesto="proyecto.presupuesto"
                                 :locacionesAsignadas="proyecto.lista_locaciones"
+                                :recursosAsignados="proyecto.recursos_asignados"
                                 @verDetalles="abrirDetalles(proyecto)"
                             />
                         </div>
@@ -513,24 +616,107 @@ onMounted(() => {
                     </div>
 
                     <div>
-                        <h4 class="font-semibold text-gray-700 border-b pb-2 mb-3">Recursos Asignados</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <template v-if="proyectoSeleccionado.lista_locaciones && proyectoSeleccionado.lista_locaciones.length > 0">
+                        <div class="flex justify-between items-center border-b pb-2 mb-3">
+                            <h4 class="font-semibold text-gray-700">Recursos Asignados</h4>
+
+                            <button
+                                v-if="!mostrarFormAsigRecurso"
+                                @click="mostrarFormAsigRecurso = true"
+                                class="cursor-pointer text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100 transition flex items-center gap-1"
+                            >
+                                <Icon icon="mdi:plus" class="w-4 h-4" /> Asignar Recurso
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <template v-if="proyectoSeleccionado.recursos_asignados && proyectoSeleccionado.recursos_asignados.length > 0">
                                 <span
-                                    v-for="(loc, index) in proyectoSeleccionado.lista_locaciones"
-                                    :key="index"
-                                    class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 flex items-center gap-2 font-medium"
+                                    v-for="(recurso) in proyectoSeleccionado.recursos_asignados"
+                                    :key="recurso.id_recurso"
+                                    class="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg border border-purple-100 flex items-center gap-2 font-medium text-sm"
                                 >
-                                    <Icon icon="mdi:map-marker" />
-                                    {{ loc }}
+                                    <Icon icon="mdi:tools" class="w-4 h-4"/>
+                                    <span>{{ recurso.nombre_recurso }}</span>
+                                    <span class="text-xs italic text-purple-500">
+                                        ({{ formatearFechaDos(recurso.fecha_inicio_uso) }} a {{ formatearFechaDos(recurso.fecha_fin_uso) }})
+                                    </span>
+
+                                    <button
+                                        @click="desasignarRecursoTecnico(recurso.id_recurso, recurso.nombre_recurso)"
+                                        title="Desasignar recurso"
+                                        class="cursor-pointer ml-1 text-red-500 hover:text-red-700 p-0.5 rounded-full hover:bg-white transition"
+                                    >
+                                        <Icon icon="mdi:close-circle" class="w-4 h-4" />
+                                    </button>
                                 </span>
                             </template>
-                            <div v-else class="text-gray-400 italic flex items-center gap-2 bg-gray-50 p-3 rounded w-full justify-center">
-                                <Icon icon="tabler:camera-off" />
-                                No hay recursos asignados
+
+                            <div v-else-if="!mostrarFormAsigRecurso" class="text-gray-400 italic text-sm flex items-center gap-2 bg-gray-50 p-2 rounded w-full">
+                                <Icon icon="tabler:camera-off" class="w-4 h-4"/>
+                                No hay recursos asignados actualmente.
                             </div>
                         </div>
+
+                        <transition name="fade">
+                            <div v-if="mostrarFormAsigRecurso" class="bg-blue-50/50 p-3 rounded-lg border border-blue-100 mt-2">
+                                <p class="text-xs font-bold text-blue-800 mb-2 uppercase">Asignar Recurso</p>
+
+                                <form @submit.prevent="asignarRecursoTecnico" class="grid grid-cols-5 gap-2 items-end">
+
+                                    <div class="col-span-2">
+                                        <label class="text-xs font-medium text-gray-600">Recurso Disponible</label>
+                                        <select
+                                            v-model="idRecSeleccionado"
+                                            class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white"
+                                            :disabled="loadingRec"
+                                            required
+                                        >
+                                            <option :value="null" disabled>Seleccione un recurso</option>
+                                            <option
+                                                v-for="rec in recDisponibles"
+                                                :key="rec.id_recurso"
+                                                :value="rec.id_recurso"
+                                            >
+                                                {{ rec.nombre_equipo }}
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-span-1">
+                                        <label class="text-xs font-medium text-gray-600">Inicio Uso</label>
+                                        <input type="date" v-model="fechaInicioRec" class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none" required />
+                                    </div>
+
+                                    <div class="col-span-1">
+                                        <label class="text-xs font-medium text-gray-600">Fin Uso</label>
+                                        <input type="date" v-model="fechaFinRec" class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none" required />
+                                    </div>
+
+                                    <div class="col-span-1 flex gap-2 justify-end">
+                                        <button
+                                            type="submit"
+                                            :disabled="loadingRec || !idRecSeleccionado || recDisponibles.length === 0"
+                                            class="bg-blue-600 cursor-pointer text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center h-8"
+                                        >
+                                            <Icon v-if="loadingRec" icon="mdi:loading" class="animate-spin w-4 h-4"/>
+                                            <Icon v-else icon="fluent-mdl2:accept-medium" height="15" width="15" class="my-0" />
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            @click="mostrarFormAsigRecurso = false"
+                                            :disabled="loadingRec"
+                                            class="cursor-pointer bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition disabled:opacity-50 h-8"
+                                        >
+                                            <Icon icon="heroicons:x-mark-20-solid" height="15" width="15" class="my-0" />
+                                        </button>
+                                    </div>
+                                </form>
+                                <p v-if="recDisponibles.length === 0 && !loadingRec" class="text-xs text-red-600 mt-1">No hay recursos disponibles para asignar.</p>
+                            </div>
+                        </transition>
                     </div>
+
                     <div>
                         <h4 class="font-semibold text-gray-700 border-b pb-2 mb-3">Personal Asignado</h4>
                         <div class="flex flex-wrap gap-2">
