@@ -1,26 +1,22 @@
 <script setup>
-import { Icon } from '@iconify/vue'
+import { Icon } from "@iconify/vue";
+import Toast from '../../../components/Toast.vue'
 import { ref, onMounted } from 'vue'
-import api from '../../../services/api.js'
-import Toast from '../../../components/Toast.vue';
+import api from '../../../services/api'
 import Confirmation from '../../../components/Confirmation.vue'
 
 const isConnecting = ref(false)
-const loadingEstados = ref(false)
-
-const showConfirmation = ref(false)
-const estadoProyectoDeleteID = ref(null)
+const loadingTiposRecursos = ref(false)
 
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
 
-const nombre_estado = ref('')
+const showConfirmation = ref(false)
+const tipoDeleteID = ref(null)
 
-const estados_proyecto = ref([])
-
-const requestDeleteEstadoProyecto = (id) => {
-    estadoProyectoDeleteID.value = id
+const requestDeleteTipoRecurso = (id) => {
+    tipoDeleteID.value = id
     showConfirmation.value = true
 }
 
@@ -33,84 +29,92 @@ const displayToast = (message, type) => {
     }, 3000);
 }
 
-const createEstadoProyecto = async () => {
+const nombre_tipo = ref('')
+
+const tipos_recursos = ref([])
+
+const getTiposRecursos = async () => {
+    loadingTiposRecursos.value = true
+
+    try {
+        const res = await api.get('/api/tiposrecursos')
+        tipos_recursos.value = res.data
+        console.log('Tipos de recurso obtenidos con exito:', tipos_recursos.value)
+    } catch (err) {
+        console.log('Error al obtener los tipos de recurso')
+    } finally {
+        loadingTiposRecursos.value = false
+    }
+}
+
+const createTiposRecursos = async () => {
     isConnecting.value = true
 
     try {
-        const res = await api.post('/api/estadosproyecto', {
-            nombre_estado:  nombre_estado.value
+        const res = await api.post('/api/tiposrecursos', {
+            nombre_tipo: nombre_tipo.value
         })
 
-        console.log('Estado de proyecto creado con exito: ', res.data)
-        estados_proyecto.value.push(res.data)
-        nombre_estado.value = ''
-        displayToast('Estado de proyecto creado', 'success')
+        console.log('Tipo de recurso creado con exito:', res.data)
+        tipos_recursos.value.push(res.data)
+        nombre_tipo.value = ''
+        displayToast('Tipo de recurso creado', 'success')
     } catch (err) {
-        err.response ? console.error('Error al crear el estado de proyecto: ', err.response.data) : console.error('Error al crear el estado de proyecto: ', err)
-        displayToast('Error al crear estado de proyecto', 'error')
+        console.log('Error al crear tipo de recurso:', err);
+        displayToast('Error al crear tipo de recurso', 'error')
     } finally {
         isConnecting.value = false
     }
 }
 
-const getEstadosProyecto = async () => {
-    loadingEstados.value = true
-
-    try {
-        const res = await api.get('/api/estadosproyecto')
-        estados_proyecto.value = res.data
-        console.log('Estados de proyecto obtenidos con exito: ', estados_proyecto.value)
-    } catch (err) {
-        console.error('Error al obtener los estados de proyecto: ', err)
-    } finally {
-        loadingEstados.value = false
-    }
-}
-
-const deleteEstadoProyecto = async () => {
-    const id = estadoProyectoDeleteID.value
+const deleteTiposRecursos = async () => {
+    const id = tipoDeleteID.value
     showConfirmation.value = false
     if (!id) return
     isConnecting.value = true
 
     try {
-        await api.delete(`/api/estadosproyecto/${id}`)
-        estados_proyecto.value = estados_proyecto.value.filter(estado => estado.id_estado_proyecto !== id)
-        displayToast('Estado de proyecto eliminado', 'success')
+        await api.delete(`/api/tiposrecursos/${id}`)
+        tipos_recursos.value = tipos_recursos.value.filter(tipo => tipo.id_tipo_recurso !== id)
+        displayToast('Tipo de recurso eliminado', 'success')
     } catch (err) {
-        console.error('Error al eliminar el estado de proyecto: ', err)
-        displayToast('Error al eliminar estado de proyecto', 'error')
+        console.log('Error al eliminar el tipo de recurso:', err)
+        if(err.response && err.response.status === 409) {
+            displayToast(err.response.data.message, 'error')
+        } else {
+            displayToast('Error al eliminar. Intentelo denuevo.', 'error')
+        }
     } finally {
         isConnecting.value = false
     }
 }
 
 onMounted(() => {
-    getEstadosProyecto()
+    getTiposRecursos()
 })
 </script>
 
 <template>
     <div class="h-screen flex flex-col">
-        <div class="border-b border-gray-200 pb-3 mb-4">
-            <h3 class="text-center font-bold text-lg">Gestion de Estados de Proyectos</h3>
+        <div class="border-b border-gray-200 pb-3 mb-4 flex justify-center">
+            <h3 class="text-center font-bold text-lg">Gestion de Tipos de Recurso</h3>
         </div>
 
         <div class="mb-4 border-b border-gray-200 pb-3">
-            <p class="text-sm font-semibold text-gray-500 mb-1">Nuevo estado</p>
-            <form @submit.prevent="createEstadoProyecto">
+            <p class="text-sm font-semibold text-gray-(500 mb-1">Nuevo tipo</p>
+            <form @submit.prevent="createTiposRecursos">
                 <div class="flex space-x-2">
                     <div class="relative flex-1">
                         <input
-                            v-model="nombre_estado"
+                            v-model="nombre_tipo"
                             type="text"
-                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Crear estado"
+                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Crear tipo"
                             required
                         >
                     </div>
                     <button type="submit" class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors">
                         <Icon icon="material-symbols:add" width="25" height="25" class="mr-2" />
-                        Crear Estado
+                        Crear Tipo
                     </button>
                 </div>
             </form>
@@ -126,34 +130,35 @@ onMounted(() => {
                         class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                     <input
                         type="text"
-                        class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Buscar estado"
+                        class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Buscar tipo"
                     >
                 </div>
+
             </div>
         </div>
 
         <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg min-h-[400px] max-h-[calc(100vh-240px)]">
             <div>
-                <div v-if="loadingEstados">
+                <div v-if="loadingTiposRecursos">
                     <div class="flex items-center justify-center text-center mt-3">
                         <div class="flex text-[15px] font-semibold text-blue-500 items-center justify-center w-full bg-blue-100 border border-blue-200 p-3 mx-3 rounded-xl shadow-md">
                             <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
-                            Cargando estados de proyectos...
+                            Cargando tipos de recursos...
                         </div>
                     </div>
                 </div>
-                <table v-else-if="estados_proyecto.length > 0" class="table-auto w-full">
+                <table v-else-if="tipos_recursos.length > 0" class="table-auto w-full">
                     <thead>
                         <tr class="bg-green-100 text-green-900">
                             <th class="px-4 py-2 text-left">ID</th>
-                            <th class="px-4 py-2 text-left">Nombre Estado</th>
+                            <th class="px-4 py-2 text-left">Nombre Tipo</th>
                             <th class="px-4 py-2 text-left">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="estados in estados_proyecto" :key="estados.id_estado_proyecto" class="border-b border-green-100 hover:bg-green-50 transition">
-                            <td class="px-4 py-2">{{ estados.id_estado_proyecto }}</td>
-                            <td class="px-4 py-2">{{ estados.nombre_estado }}</td>
+                        <tr v-for="tipos in tipos_recursos" :key="tipos.id_tipo_recurso" class="border-b border-green-100 hover:bg-green-50 transition">
+                            <td class="px-4 py-2">{{ tipos.id_tipo_recurso }}</td>
+                            <td class="px-4 py-2">{{ tipos.nombre_tipo }}</td>
                             <td class="px-4 py-2 flex items-center gap-1">
                                 <button
                                     class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
@@ -162,7 +167,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="requestDeleteEstadoProyecto(estados.id_estado_proyecto)"
+                                    @click="requestDeleteTipoRecurso(tipos.id_tipo_recurso)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -176,27 +181,27 @@ onMounted(() => {
                     <div class="flex items-center justify-center text-center mt-3">
                         <div class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
                             <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
-                            No hay estados de proyectos creados.
+                            No hay tipos de recursos creados.
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar tipo recurso"
+            message="¿Está seguro/a que desea eliminar este tipo de recurso?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteTiposRecursos"
+            @cancel="showConfirmation = false"
+        />
+
         <Toast
             v-model="showToast"
             :message="toastMessage"
             :type="toastType"
-        />
-
-        <Confirmation
-            :show="showConfirmation"
-            title="Eliminar estado proyecto"
-            message="¿Está seguro/a que desea eliminar este estado de proyecto?"
-            confirm-text="Eliminar"
-            cancel-text="Cancelar"
-            @confirm="deleteEstadoProyecto"
-            @cancel="showConfirmation = false"
         />
     </div>
 </template>

@@ -5,7 +5,15 @@
         </div>
         <div
             class="flex-1 overflow-y-auto border border-gray-200 rounded-lg min-h-[400px] max-h-[calc(100vh-240px)] p-3">
-            <table class="table-auto w-full">
+            <div v-if="loadingRecursosTecnicos">
+                <div class="flex items-center justify-center text-center mt-3">
+                    <div class="flex text-[15px] font-semibold text-blue-500 items-center justify-center w-full bg-blue-100 border border-blue-200 p-3 mx-3 rounded-xl shadow-md">
+                        <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                        Cargando recursos tecnicos...
+                    </div>
+                </div>
+            </div>
+            <table v-else-if="recursos_tecnicos.length > 0" class="table-auto w-full">
                 <thead>
                     <tr class="bg-green-100 text-green-900">
                         <th class="px-4 py-2 text-left">ID</th>
@@ -15,99 +23,232 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="recurso in recursos" :key="recurso.idrecurso"
+                    <tr v-for="recurso in recursos_tecnicos" :key="recurso.id_recurso"
                         class="border-b border-green-100 hover:bg-green-50 transition">
-                        <td class="px-4 py-2">{{ recurso.idrecurso }}</td>
-                        <td class="px-4 py-2">{{ recurso.nombreequipo }}</td>
-                        <td class="px-4 py-2">{{ recurso.nombretipo }}</td>
+                        <td class="px-4 py-2">{{ recurso.id_recurso }}</td>
+                        <td class="px-4 py-2">{{ recurso.nombre_equipo }}</td>
+                        <td class="px-4 py-2">{{ recurso.nombre_tipo }}</td>
                         <td class="px-4 py-2 flex items-center gap-1">
                             <button
                                 class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
                                 <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" /> Editar
                             </button>
                             <button
-                                class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
+                                @click="requestDeleteRecursoTecnico(recurso.id_recurso)"
+                                class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
+                            >
                                 <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" /> Eliminar
                             </button>
                         </td>
                     </tr>
                 </tbody>
             </table>
+            <div v-else>
+                <div class="flex items-center justify-center text-center mt-3">
+                    <div class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                        <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                        No hay recursos tecnicos creados.
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="flex justify-end mt-4">
             <button
                 class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors"
-                @click="modalNuevoRecurso = true">
+                @click="showModal = true">
                 <Icon icon="material-symbols:add" width="25" height="25" class="mr-2" /> Nuevo Recurso
             </button>
         </div>
-        <div v-if="modalNuevoRecurso" class="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
-            <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-lg relative">
-                <button class="absolute top-2 right-2 text-2xl font-bold text-gray-500"
-                    @click="modalNuevoRecurso = false">&times;</button>
-                <h4 class="font-bold text-lg mb-4 text-center">Nuevo Recurso</h4>
-                <form @submit.prevent="crearRecurso">
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Nombre del Equipo</label>
-                        <input v-model="nuevoRecurso.nombreequipo" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
+
+        <Modal
+            v-if="showModal" :show="showModal" @close="showModal = false"
+            size="sm"
+            title="Nuevo Recurso Tecnico"
+        >
+            <div>
+                <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                    <Icon icon="mdi:error" width="25" heigth="25" class="mr-2" />
+                    Complete todos los campos.
+                </div>
+
+                <form @submit.prevent="createRecursoTecnico" class="mb-2">
+                    <div class="mb-2">
+                        <label for="nombre" class="text-sm font-semibold text-gray-500 mb-1">Nombre</label>
+                        <input
+                            type="text"
+                            v-model="nombre_equipo"
+                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            placeholder="Nombre"
+                        >
                     </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Tipo de Recurso</label>
-                        <input v-model="nuevoRecurso.nombretipo" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
+                    <div class="mb-2">
+                        <label for="nombre" class="text-sm font-semibold text-gray-500 mb-1">Tipo de Recurso</label>
+                        <select
+                            v-model="id_tipo_recurso"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1"
+                        >
+                            <option :value="null" selected disabled>Seleccione un tipo</option>
+                            <option v-for="tipo in tiposRecursos" :key="tipo.id_tipo_recurso" :value="tipo.id_tipo_recurso">{{ tipo.nombre_tipo }}</option>
+                        </select>
                     </div>
-                    <div class="flex justify-end gap-2 mt-5">
-                        <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                            @click="modalNuevoRecurso = false">Cancelar</button>
-                        <button type="submit"
-                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">Guardar</button>
-                    </div>
+                    <button type="submit" class="w-full flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
+                        Crear recurso tecnico
+                    </button>
                 </form>
+                <button @click="limpiarCampos" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
+                    Limpiar campos
+                </button>
             </div>
-        </div>
+        </Modal>
+
+        <Toast
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar recurso tecnico"
+            message="¿Está seguro/a que desea eliminar este recurso tecnico?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteRecursosTecnicos"
+            @cancel="showConfirmation = false"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
+import Modal from '../../../components/Modal.vue'
+import Toast from '../../../components/Toast.vue'
+import Confirmation from '../../../components/Confirmation.vue'
 
-const recursos = ref([
-    {
-        idrecurso: 1,
-        nombreequipo: 'Consola Yamaha MG16XU',
-        nombretipo: 'Consola de Audio'
-    },
-    {
-        idrecurso: 2,
-        nombreequipo: 'Micrófono Shure SM58',
-        nombretipo: 'Micrófono'
-    },
-    {
-        idrecurso: 3,
-        nombreequipo: 'Proyector Epson EB-U42',
-        nombretipo: 'Proyector'
-    }
-])
+const recursos_tecnicos = ref([])
 
-const modalNuevoRecurso = ref(false)
-const nuevoRecurso = ref({
-    nombreequipo: '',
-    nombretipo: ''
-})
+const showModal = ref(false)
+const isConnecting = ref(false)
+const loadingRecursosTecnicos = ref(false)
+const error = ref(false)
 
-// Agregar la lógica real después, por ahora dejé la estructura de como PIENSO que debería hacerse.
-const crearRecurso = async () => {
+const showConfirmation = ref(false)
+const recursoDeleteID = ref(null)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const requestDeleteRecursoTecnico = (id) => {
+    recursoDeleteID.value = id
+    showConfirmation.value = true
+}
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
+
+//form
+const tiposRecursos = ref([])
+const nombre_equipo = ref('')
+const id_tipo_recurso = ref(null)
+
+const limpiarCampos = () => {
+    nombre_equipo.value = ''
+    id_tipo_recurso.value = null
+    console.log('Campos limpiados')
+}
+
+const validarFormulario = () => {
+    const nombrevalido = nombre_equipo.value && nombre_equipo.value.trim().length > 0
+    const idvalida = id_tipo_recurso.value !== null
+    return nombrevalido && idvalida
+}
+
+const cargarTiposRecursos = async () => {
     try {
-        await api.post('/apirecursos', nuevoRecurso.value)
-        modalNuevoRecurso.value = false
-        nuevoRecurso.value = { nombreequipo: '', nombretipo: '' }
-        // getRecursos() y de acá parto cuando sepa como hacerle ;P
+        const res = await api.get('/api/tiposrecursos')
+        tiposRecursos.value = res.data
     } catch (err) {
-        alert('No se pudo crear el recurso')
-        console.error(err)
+        console.error('Error al cargar los tipos de recurso:', err);
     }
 }
+
+const createRecursoTecnico = async () => {
+    if(!validarFormulario()) {
+        error.value = true
+        return
+    }
+    error.value = false
+
+    isConnecting.value = true
+
+    try {
+        const res = await api.post('/api/recursostecnicos', {
+            nombre_equipo: nombre_equipo.value,
+            id_tipo_recurso: id_tipo_recurso.value
+        })
+
+        const tipoSeleccionado = tiposRecursos.value.find(tipo => tipo.id_tipo_recurso === res.data.id_tipo_recurso)
+        const nuevoRecurso = {
+            ...res.data,
+            nombre_tipo: tipoSeleccionado ? tipoSeleccionado.nombre_tipo : 'Desconocido'
+        }
+
+        console.log('Recurso tecnico creado exitosamente: ', nuevoRecurso);
+        recursos_tecnicos.value.push(nuevoRecurso)
+        limpiarCampos()
+        showModal.value = false
+        displayToast('Recurso tecnico creado', 'success')
+    } catch (err) {
+        console.log('Error al crear nuevo recurso tecnico: ', err)
+        displayToast('Error al crear el recurso tecnico', 'error')
+    } finally {
+        isConnecting.value = false
+    }
+}
+
+const getRecursosTecnicos = async () => {
+    loadingRecursosTecnicos.value = true
+
+    try {
+        const res = await api.get('/api/recursostecnicos')
+        recursos_tecnicos.value = res.data
+        console.log('Recursos tecnicos obtenidos: ', recursos_tecnicos.value)
+    } catch (err) {
+        console.log('Error al obtener los recursos tecnicos:', err)
+    } finally {
+        loadingRecursosTecnicos.value = false
+    }
+}
+
+const deleteRecursosTecnicos = async () => {
+    const id = recursoDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
+    isConnecting.value = true
+
+    try {
+        await api.delete(`/api/recursostecnicos/${id}`)
+        recursos_tecnicos.value = recursos_tecnicos.value.filter(recurso => recurso.id_recurso !== id)
+        displayToast('Recurso tecnico eliminado', 'success')
+    } catch (err) {
+        console.log('Error al eliminar el recurso tecnico')
+        displayToast('Error al eliminar el recurso tecnico', 'error')
+    } finally {
+        isConnecting.value = false
+    }
+}
+
+onMounted(() => {
+    cargarTiposRecursos()
+    getRecursosTecnicos()
+})
 </script>

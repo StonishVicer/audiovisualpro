@@ -7,11 +7,12 @@ import clienteRoutes from './routes/cliente.routes.js'
 import tiposProyectoRoutes from './routes/tiposProyecto.routes.js'
 import estadosProyectoRoutes from './routes/estadosProyecto.routes.js'
 import locacionRoutes from './routes/locacion.routes.js'
-
-// 🔹 NUEVAS RUTAS
+import tiposRecursosRoutes from "./routes/tiposRecursos.routes.js";
+import recursosTecnicosRoutes from './routes/recursoTecnico.routes.js'
 import rolesPersonalRoutes from './routes/rolespersonal.routes.js'
 import personalRoutes from './routes/personal.routes.js'
 import asignacionPersonalRoutes from './routes/asignacionpersonal.routes.js'
+import proyectosRoutes from "./routes/proyecto.routes.js";
 
 dotenv.config()
 const app = express()
@@ -25,13 +26,15 @@ app.use('/api/tiposproyecto', tiposProyectoRoutes)
 app.use('/api/estadosproyecto', estadosProyectoRoutes)
 app.use('/api/locacion', locacionRoutes)
 
-// 🔹 NUEVOS ENDPOINTS DEL MÓDULO PERSONAL
+app.use('/api/tiposrecursos', tiposRecursosRoutes)
+app.use('/api/recursostecnicos', recursosTecnicosRoutes)
 app.use('/api/roles_personal', rolesPersonalRoutes)
 app.use('/api/personal', personalRoutes)
 app.use('/api/asignaciones', asignacionPersonalRoutes)
+app.use('/api/proyectos', proyectosRoutes)
 
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en localhost:${PORT}`)
+    console.log(`Servidor corriendo en localhost:${PORT}`)
 })

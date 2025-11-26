@@ -3,16 +3,38 @@ import { ref, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import Toast from '../../../components/Toast.vue';
 import api from '../../../services/api.js'
+import Confirmation from '../../../components/Confirmation.vue'
 
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const loadingTipos = ref(false)
+
+const showConfirmation = ref(false)
+const tipoProyectoDeleteID = ref(null)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
 
 const nombre_tipo = ref('')
 
 const tipos_proyecto = ref([])
 
+const requestDeleteTipoProyecto = (id) => {
+    tipoProyectoDeleteID.value = id
+    showConfirmation.value = true
+}
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
+
 const createTipoProyecto = async () => {
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         const res = await api.post('/api/tiposproyecto', {
@@ -22,10 +44,12 @@ const createTipoProyecto = async () => {
         console.log('Tipo de proyecto creado con exito: ', res.data)
         tipos_proyecto.value.push(res.data)
         nombre_tipo.value = ''
+        displayToast('Tipo de proyecto creado', 'success')
     } catch (err) {
         err.response ? console.error('Error al crear el tipo de proyecto: ', err.response.data) : console.error('Error al crear el tipo de proyecto: ', err)
+        displayToast('Error al crear tipo de proyecto', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -43,18 +67,21 @@ const getTiposProyecto = async () => {
     }
 }
 
-const deleteTipoProyecto = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este tipo de proyecto?')
-    if (!confirmacion) return
-    isLoading.value = true
+const deleteTipoProyecto = async () => {
+    const id = tipoProyectoDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/tiposproyecto/${id}`)
         tipos_proyecto.value = tipos_proyecto.value.filter(tipo => tipo.id_tipo_proyecto !== id)
+        displayToast('Tipo de proyecto eliminado', 'success')
     } catch (err) {
         console.error('Error al eliminar el tipo de proyecto: ', err)
+        displayToast('Error al eliminar el tipo de proyecto', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -102,7 +129,7 @@ onMounted(() => {
                         class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Buscar tipo"
                     >
                 </div>
-                
+
             </div>
         </div>
 
@@ -136,7 +163,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="deleteTipoProyecto(tipos.id_tipo_proyecto)"
+                                    @click="requestDeleteTipoProyecto(tipos.id_tipo_proyecto)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -158,9 +185,19 @@ onMounted(() => {
         </div>
 
         <Toast
-            v-model="isLoading"
-            message="Conectando..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar tipo proyecto"
+            message="¿Está seguro/a que desea eliminar este tipo de proyecto?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteTipoProyecto"
+            @cancel="showConfirmation = false"
         />
     </div>
 </template>

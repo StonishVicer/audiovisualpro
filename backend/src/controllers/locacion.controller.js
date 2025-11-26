@@ -17,9 +17,9 @@ export const getLocacionById = async (req, res) => {
 
 export const getLocaciones = async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM locaciones ORDER BY id_locaciones ASC')
+        const result = await pool.query('SELECT * FROM locaciones ORDER BY id_locacion ASC')
         if(result.rows.length === 0){
-            res.status(404).json({ message: 'Error al obtener las locaciones' })
+            res.status(404).json({ message: 'No se encontraron locaciones' })
         }
 
         res.json(result.rows)
@@ -43,16 +43,35 @@ export const createLocacion = async (req, res) => {
 }
 
 export const deleteLocacion = async (req, res) => {
-    try {
-        const { id } = req.params
-        const result = await pool.query('DELETE FROM locaciones WHERE id_locacion = $1 RETURNING *', [id])
+    const { id } = req.params;
 
-        if (result.rows.length === 0) {
-            res.status(404),json({ message: "Locacion no encontrada" })
+    try {
+        const checkResult = await pool.query(
+            'SELECT COUNT(*) FROM proyecto_locaciones WHERE id_locacion = $1',
+            [id]
+        );
+
+        const count = parseInt(checkResult.rows[0].count);
+
+        if (count > 0) {
+            return res.status(409).json({
+                message: `No se puede eliminar la locación. Está asignada a ${count} proyecto(s).`
+            });
         }
 
-        res.json({ message: "Locacion eliminada con exito" })
+        const result = await pool.query(
+            'DELETE FROM locaciones WHERE id_locacion = $1 RETURNING *',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Locacion no encontrada" });
+        }
+
+        res.json({ message: "Locacion eliminada con exito" });
+
     } catch(err) {
-        res.status(500).json({ message: "Error al eliminar locacion" })
+        console.error("Error al eliminar locación:", err);
+        res.status(500).json({ message: "Error al eliminar locacion" });
     }
 }

@@ -1,18 +1,31 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue';
 
-defineProps({
+const props = defineProps({
   show: Boolean,
   title: {
     type: String,
     default: 'Titulo'
+  },
+  size: {
+    type: String,
+    default: 'md'
   }
 })
 
 const emit = defineEmits(['close'])
 
 const visible = ref(false)
+
+const maxWidthClass = computed(() => {
+    switch (props.size) {
+        case 'sm': return 'max-w-md'
+        case 'lg': return 'max-w-4xl'
+        case 'xl': return 'max-w-6xl'
+        default: return 'max-w-2xl'
+    }
+})
 
 watch(() => visible.value, (val) => {
   if (!val) emit('close')
@@ -39,20 +52,23 @@ const closeModalOnBackdrop = (e) => {
     <div
       v-if="show"
       @click="closeModalOnBackdrop"
-      class="fixed inset-0 flex items-center justify-center bg-green-100/25 backdrop-blur-sm z-50"
+      class="fixed inset-0 flex items-center justify-center bg-green-900/40 backdrop-blur-sm z-50 p-4" 
     >
-      <transition name="scale">
+        <transition name="scale">
         <div
           v-if="visible"
-          class="bg-white border border-green-100 p-6 rounded-2xl shadow-lg w-96 transform transition-transform"
+          :class="['bg-white border border-green-100 p-6 rounded-2xl shadow-2xl transform transition-transform w-full', maxWidthClass]"
         >
-          <div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-3">
-            <h2 class="text-xl font-bold text-black">{{ title }}</h2>
-            <button @click="closeModal" class="text-white bg-red-500 p-1 rounded-lg hover:bg-red-600 transition-colors">
-              <Icon icon="mdi:close" width="24" height="24" />
+          <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
+            <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>
+            <button @click="closeModal" class="cursor-pointer text-gray-500 bg-gray-100 p-2 rounded-lg hover:bg-red-500 hover:text-white transition-all">
+              <Icon icon="mdi:close" width="20" height="20" />
             </button>
           </div>
-          <slot />
+          
+          <div class="max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
+              <slot />
+          </div>
         </div>
       </transition>
     </div>
@@ -60,25 +76,13 @@ const closeModalOnBackdrop = (e) => {
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.scale-enter-active, .scale-leave-active { transition: all 0.3s ease; }
+.scale-enter-from, .scale-leave-to { transform: scale(0.95); opacity: 0; }
 
-.scale-enter-active,
-.scale-leave-active {
-  transition: all 0.3s ease;
-}
-.scale-enter-from {
-  transform: scale(0.8);
-  opacity: 0;
-}
-.scale-leave-to {
-  transform: scale(0.8);
-  opacity: 0;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 </style>

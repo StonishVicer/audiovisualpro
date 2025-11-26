@@ -4,6 +4,7 @@ import Modal from '../../../components/Modal.vue'
 import Toast from '../../../components/Toast.vue'
 import { onMounted, ref } from 'vue'
 import api from '../../../services/api.js'
+import Confirmation from '../../../components/Confirmation.vue'
 
 const clientes = ref([])
 
@@ -16,9 +17,30 @@ const codigoRif = ref('V')
 const codigoTelefono = ref('0414')
 
 const showModal = ref(false)
-const isLoading = ref(false)
+const isConnecting = ref(false)
 const error = ref(false)
 const loadingClientes = ref(false)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const showConfirmation = ref(false)
+const clienteDeleteID = ref(null)
+
+const requestDeleteCliente = (id) => {
+    clienteDeleteID.value = id
+    showConfirmation.value = true
+}
+
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
 
 const validarFormulario = () => {
     const { nombre, rif, email, telefono } = {
@@ -41,7 +63,7 @@ const limpiarCampos = () => {
 }
 
 const createCliente = async () => {
-    isLoading.value = true
+    isConnecting.value = true
 
     try {
         if (!validarFormulario()) {
@@ -61,10 +83,12 @@ const createCliente = async () => {
         clientes.value.push(res.data)
         limpiarCampos()
         showModal.value = false
+        displayToast('Cliente creado', 'success')
     } catch (err) {
         console.error('Error al crear al cliente:', err);
+        displayToast('Error al crear al cliente', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -82,18 +106,21 @@ const getClientes = async () => {
     }
 }
 
-const deleteCliente = async (id) => {
-    const confirmacion = confirm('Esta seguro/a que desea eliminar este cliente?')
-    if (!confirmacion) return
-    isLoading.value = true
+const deleteCliente = async () => {
+    const id = clienteDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
+    isConnecting.value = true
 
     try {
         await api.delete(`/api/clientes/${id}`)
         clientes.value = clientes.value.filter(cliente => cliente.id_cliente !== id)
+        displayToast('Cliente eliminado', 'success')
     } catch (err) {
         console.error('Error al eliminar el cliente: ', err)
+        displayToast('Error al eliminar el cliente', 'error')
     } finally {
-        isLoading.value = false
+        isConnecting.value = false
     }
 }
 
@@ -167,7 +194,7 @@ onMounted(() => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="deleteCliente(cliente.id_cliente)"
+                                    @click="requestDeleteCliente(cliente.id_cliente)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
@@ -190,6 +217,7 @@ onMounted(() => {
 
         <Modal
             v-if="showModal" :show="showModal" @close="showModal = false"
+            size="sm"
             title="Nuevo Cliente"
         >
             <div>
@@ -275,9 +303,19 @@ onMounted(() => {
         </Modal>
 
         <Toast
-            v-model="isLoading"
-            message="Conectando..."
-            type="loading"
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar cliente"
+            message="¿Está seguro/a que desea eliminar este cliente?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deleteCliente"
+            @cancel="showConfirmation = false"
         />
     </div>
 </template>
