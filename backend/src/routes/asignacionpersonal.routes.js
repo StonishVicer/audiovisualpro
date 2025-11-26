@@ -4,13 +4,17 @@ import {
     getAsignacionPersonalById,
     createAsignacionPersonal,
     updateAsignacionPersonal,
-    deleteAsignacionPersonal
+    deleteAsignacionPersonal,
+    getAsignacionesPorProyecto
 } from '../controllers/asignacionPersonal.controller.js'
 
 const router = Router()
 
 // GET /api/asignaciones
 router.get('/', getAsignacionesPersonal)
+
+// GET /api/asignaciones/proyecto/:idProyecto
+router.get('/proyecto/:idProyecto', getAsignacionesPorProyecto)
 
 // GET /api/asignaciones/:id
 router.get('/:id', getAsignacionPersonalById)
