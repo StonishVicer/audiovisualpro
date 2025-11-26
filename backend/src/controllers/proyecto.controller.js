@@ -2,9 +2,82 @@ import { pool } from '../database/database.js'
 
 export const getProyectoById = async (req, res) => {
     try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `
+            SELECT
+                pr.id_proyecto,
+                pr.nombre_proyecto,
+                tp.id_tipo_proyecto,
+                ep.id_estado_proyecto,
+                tp.nombre_tipo,
+                ep.nombre_estado,
+                -- Formateamos las fechas
+                TO_CHAR(pr.fecha_inicio, 'DD-MM-YYYY') AS fecha_inicio,
+                TO_CHAR(pr.fecha_fin_estimada, 'DD-MM-YYYY') AS fecha_fin_estimada,
+                
+                -- Campo solicitado: FECHA DE FINALIZACIÓN REAL (Asumiendo que existe en la tabla proyectos)
+                TO_CHAR(pr.fecha_fin, 'DD-MM-YYYY') AS fecha_fin, 
+                
+                pr.presupuesto,
+                
+                -- Agregación de Locaciones
+                COALESCE(
+                    JSON_AGG(DISTINCT l.nombre_locacion) FILTER (WHERE l.nombre_locacion IS NOT NULL),
+                    '[]'
+                ) as lista_locaciones,
+                
+                -- Agregación de RECURSOS ASIGNADOS
+                COALESCE(
+                    JSON_AGG(
+                        DISTINCT jsonb_build_object(
+                            'id_recurso', rt.id_recurso,
+                            'nombre_recurso', rt.nombre_equipo,
+                            'fecha_inicio_uso', ur.fecha_inicio_uso,
+                            'fecha_fin_uso', ur.fecha_fin_uso
+                        )
+                    ) FILTER (WHERE ur.id_recurso IS NOT NULL), 
+                    '[]' 
+                ) AS recursos_asignados
+                
+            FROM proyectos pr
+            
+            LEFT JOIN tipos_proyecto tp ON pr.id_tipo_proyecto = tp.id_tipo_proyecto
+            LEFT JOIN estados_proyecto ep ON pr.id_estado_proyecto = ep.id_estado_proyecto
+            
+            LEFT JOIN proyecto_locaciones pl ON pr.id_proyecto = pl.id_proyecto
+            LEFT JOIN locaciones l ON pl.id_locacion = l.id_locacion
+
+            LEFT JOIN uso_recurso ur ON pr.id_proyecto = ur.id_proyecto
+            LEFT JOIN recurso_tecnico rt ON ur.id_recurso = rt.id_recurso
+
+            WHERE pr.id_proyecto = $1 
+            
+            GROUP BY
+                pr.id_proyecto,
+                tp.id_tipo_proyecto,
+                ep.id_estado_proyecto,
+                tp.nombre_tipo,
+                ep.nombre_estado,
+                pr.fecha_inicio,
+                pr.fecha_fin_estimada,
+                pr.fecha_fin, -- ¡IMPORTANTE! Agregar al GROUP BY si existe
+                pr.presupuesto
+            LIMIT 1
+            `,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Proyecto no encontrado' });
+        }
+
+        res.status(200).json(result.rows[0]);
 
     } catch (err) {
-        res.status(500).json({ message: 'Error al obtener proyectos por ID' })
+        console.error('Error al obtener proyecto por ID:', err);
+        res.status(500).json({ message: 'Error al obtener proyectos por ID' });
     }
 }
 

@@ -1,68 +1,217 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import api from "../../services/api.js";
 
-//INICIO DE LAS GRAFICAS
-//GRAFICA CIRCULAR
-import { Pie } from "vue-chartjs";
-import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
-Chart.register(ArcElement, Tooltip, Legend);
+import Calendario from '../../components/Calendario.vue' //CALENDARIO
 
-const personaXRol = ref([])
+const loading = ref(true)
 
-//KEYS
-const chartKey = ref(0)
+//GRAFICAS
+import DoughnutChart from '../../components/DoughnutChart.vue'
+import BarChart from '../../components/BarChart.vue'
 
-const cargarPersonaXRol = async () => {
-  try {
-    const res = await api.get('/api/personal')
-    personaXRol.value = res.data
-    
-    const conteoPorRol = {}
-    res.data.forEach((p) => {
-      const nombreRol = p.nombre_rol || 'Sin rol'
-      if (!conteoPorRol[nombreRol]) {
-        conteoPorRol[nombreRol] = 0
+const personal = ref([])
+const proyectos = ref([])
+const roles = ref([])
+const recursos = ref([])
+const asignacionesPersonal = ref([])
+
+const fetchData = async () => {
+    try {
+        const personalRes = await api.get('/api/personal')
+        personal.value = personalRes.data
+
+        const proyectosRes = await api.get('/api/proyectos')
+        proyectos.value = proyectosRes.data
+
+        const rolesRes = await api.get('/api/roles_personal')
+        roles.value = rolesRes.data
+
+        const recursosRes = await api.get('/api/recursostecnicos')
+        recursos.value = recursosRes.data
+
+        const asignacionesRes = await api.get('/api/asignaciones')
+        asignacionesPersonal.value = asignacionesRes.data
+    } catch (err) {
+        console.log('Error al cargar datos: ', err)
+    }
+}
+
+//CONTEO - MAXIMO DE 5 DATOS EN GRAFICAS
+const processChartData = (counts, defaultColors, otherColor = '#BDBDBD') => {
+    const items = Object.entries(counts);
+
+    items.sort(([, a], [, b]) => b - a);
+
+    const topItems = items.slice(0, 5);
+    const otherItems = items.slice(5);
+
+    let labels = topItems.map(([label]) => label);
+    let data = topItems.map(([, value]) => value);
+    let backgroundColors = defaultColors.slice(0, topItems.length);
+
+    if (otherItems.length > 0) {
+        const otherSum = otherItems.reduce((sum, [, value]) => sum + value, 0);
+        labels.push(`Otros ${otherSum}`);
+        data.push(otherSum);
+        backgroundColors.push(otherColor);
+    }
+
+    if (data.length === 0 || data.every(d => d === 0)) {
+        return { 
+            labels: ['Sin datos'], 
+            data: [1], 
+            backgroundColors: ['#E0E0E0'] 
+        };
+    }
+
+    return { labels, data, backgroundColors };
+}
+
+//OPCIONES GENERALES
+const optionsGeneral = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        generateLabels: (chart) => {
+          const data = chart.data;
+          if (data.labels.length && data.datasets.length) {
+            return data.labels.map((label, i) => {
+              const dataValue = data.datasets[0].data[i];
+              return {
+                text: label,
+                fillStyle: data.datasets[0].backgroundColor[i],
+                strokeStyle: data.datasets[0].borderColor ? data.datasets[0].borderColor[i] : 'rgba(0,0,0,0)',
+                lineWidth: 1,
+                hidden: isNaN(dataValue),
+                index: i
+              };
+            });
+          }
+          return [];
+        }
       }
-      conteoPorRol[nombreRol]++
-    })
-    
-    chartData.value.labels = Object.keys(conteoPorRol)
-    chartData.value.datasets[0].data = Object.values(conteoPorRol)
-
-    chartKey.value += 1
-  } catch (err) {
-    console.log('Error al cargar el personal por rol: ', err)
+    }
   }
 }
 
-const chartData = ref({
-  labels: [],
-  datasets: [
-    {
-      label: 'Personal por Rol',
-      data: [],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)'
-      ],
-      borderColor: [
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)'
-      ],
-      borderWidth: 1
-    }
-  ]
+//1 - PERSONAL POR ROL
+const chartPersonalPorRol = computed(() => {
+  const rolCounts = {};
+  const rolMap = new Map(roles.value.map(r => [r.id_rol, r.nombre_rol]));
+
+  personal.value.forEach(p => {
+    const rolName = rolMap.get(p.id_rol) || 'Rol Desconocido'; 
+    rolCounts[rolName] = (rolCounts[rolName] || 0) + 1;
+  });
+
+  const chartData = processChartData(
+    rolCounts, 
+    ['#ff443d', '#ffc53d', '#57ff3d', '#3da8ff', '#8e3dff'],
+    '#757575'
+  );
+
+  return {
+    labels: chartData.labels,
+    datasets: [{
+      backgroundColor: chartData.backgroundColors, 
+      data: chartData.data,
+    }]
+  }
 })
-//FIN DE LAS GRAFICAS
+
+const optionsPersonalPorRol = {
+  ...optionsGeneral,
+  plugins: {
+    ...optionsGeneral.plugins,
+    title: { display: true, text: 'Personal por Rol', font: { size: 16 } }
+  }
+}
+
+//2 - PROYECTOS POR TIPOS
+const chartProyectosPorTipo = computed(() => {
+  const tipoCounts = {};
+  proyectos.value.forEach(p => {
+    const tipoName = p.nombre_tipo || 'Desconocido';
+    tipoCounts[tipoName] = (tipoCounts[tipoName] || 0) + 1;
+  });
+
+  const chartData = processChartData(
+    tipoCounts,
+    ['#83f288', '#54c45a', '#23ad2a', '#0a9411', '#007306'], '#757575'
+  );
+  
+  return {
+    labels: chartData.labels,
+    datasets: [{
+      backgroundColor: chartData.backgroundColors,
+      data: chartData.data,
+    }]
+  }
+})
+
+const optionsProyectosPorTipo = {
+  ...optionsGeneral,
+  plugins: {
+    ...optionsGeneral.plugins,
+    title: { display: true, text: 'Proyectos por Tipo', font: { size: 16 } }
+  }
+}
+
+//3 - PERSONAL ASIGNADO A PROYECTO
+const chartPersonalAsignado = computed(() => {
+  if (!personal.value.length) {
+    return {
+      labels: ['Sin datos'],
+      datasets: [{ backgroundColor: ['#E0E0E0'], data: [1] }]
+    };
+  }
+
+  // 1. Obtener la lista de IDs de personal que tienen AL MENOS UNA asignación
+  // Usamos la tabla asignacion_personal
+  const assignedPersonalIds = new Set(
+    asignacionesPersonal.value.map(a => a.id_personal)
+  );
+
+  let assignedCount = 0;
+  let unassignedCount = 0;
+
+  // 2. Recorrer todo el personal para contarlos
+  personal.value.forEach(p => {
+    if (assignedPersonalIds.has(p.id_personal)) {
+      assignedCount++;
+    } else {
+      unassignedCount++;
+    }
+  });
+  
+  // Si no hay datos de personal, devolvemos sin datos
+  if (assignedCount + unassignedCount === 0) {
+     return { labels: ['Sin datos'], datasets: [{ backgroundColor: ['#E0E0E0'], data: [1] }] };
+  }
+
+  return {
+    // Etiqueta: Nombre + Cantidad (ej: Asignados 4)
+    labels: [`Asignados ${assignedCount}`, `No Asignados ${unassignedCount}`],
+    datasets: [{
+      backgroundColor: ['#23ad2a', '#757575'], // Verde Oscuro y Gris
+      data: [assignedCount, unassignedCount],
+    }]
+  }
+})
+
+const optionsPersonalAsignado = {
+  ...optionsGeneral,
+  plugins: {
+    ...optionsGeneral.plugins,
+    title: { display: true, text: 'Personal Asignado a Proyectos', font: { size: 16 } }
+  }
+}
+
+//FIN DE GRAFICAS
 
 const cantClientsReg = ref(0)
 const cantEmpleados = ref(0)
@@ -72,6 +221,7 @@ const cantLocaciones = ref(0)
 const cantRecursos = ref(0)
 const cantTiposRecursos = ref(0)
 const cantRolesPersonal = ref(0)
+const cantProyectos = ref(0)
 
 const cargarCantClientsReg = async () => {
     try {
@@ -145,6 +295,15 @@ const cargarCantRolesPersonal = async () => {
     }
 }
 
+const cargarCantProyectos = async () => {
+    try {
+        const res = await api.get('/api/proyectos')
+        cantProyectos.value = res.data.length
+    } catch (err) {
+        console.log('Error al cargar la cantidad de proyectos: ', err)
+    }
+}
+
 onMounted(() => {
     cargarCantClientsReg()
     cargarCantEmpleados()
@@ -154,9 +313,8 @@ onMounted(() => {
     cargarCantRecursos()
     cargarCantTiposRecursos()
     cargarCantRolesPersonal()
-
-    //GRAFICAS
-    cargarPersonaXRol()
+    cargarCantProyectos()
+    fetchData()
 })
 </script>
 
@@ -169,8 +327,12 @@ onMounted(() => {
             <div class="w-full">
                 <div class="grid grid-cols-3 gap-4 h-full">
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg">
-                        Calendario
+                        <div class="border-b border-gray-200 pb-2 mb-4">
+                            <h3 class="text-center font-bold text-lg">Calendario</h3>
+                        </div>
+                        <Calendario />
                     </div>
+
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg">
                         <div class="flex flex-col">
                             <div class="border-b border-gray-200 pb-2 mb-4">
@@ -184,19 +346,31 @@ onMounted(() => {
                             <p class="text-green-600 font-semibold">Cantidad de Recursos Técnicos: {{ cantRecursos }}</p>
                             <p class="text-green-600 font-semibold">Cantidad de Tipos de Recursos: {{ cantTiposRecursos }}</p>
                             <p class="text-green-600 font-semibold">Cantidad de Roles de Personal: {{ cantRolesPersonal }}</p>
+                            <p class="text-green-600 font-semibold">Cantidad de Proyectos: {{ cantProyectos }}</p>
                         </div>
                     </div>
+
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg">
                         
                     </div>
+
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg col-span-2">
                         <div class="border-b border-gray-200 pb-2 mb-4">
                             <h3 class="text-center font-bold text-lg">Graficas</h3>
                         </div>
-                        <div class="h-[330px] max-w-[500px] mx-auto">
-                            <Pie :key="chartKey" :data="chartData" :options="chartOptions" />
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="flex flex-col items-center">
+                                <DoughnutChart :chart-data="chartProyectosPorTipo" :chart-options="optionsProyectosPorTipo" class="h-64 w-full"/>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <DoughnutChart :chart-data="chartPersonalAsignado" :chart-options="optionsPersonalAsignado" class="h-64 w-full"/>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <DoughnutChart :chart-data="chartPersonalPorRol" :chart-options="optionsPersonalPorRol" class="h-64 w-full"/>
+                            </div>
                         </div>
                     </div>
+
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg">
                         
                     </div>
