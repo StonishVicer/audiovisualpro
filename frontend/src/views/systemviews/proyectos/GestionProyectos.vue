@@ -68,7 +68,7 @@ const showModal = ref(false)
 const formatearFechaDos = (fecha) => {
     if (!fecha) return 'No definida'
     const date = new Date(fecha)
-    return date.toLocaleDateString('es-ES', {
+    return date.toLocaleDateString('es-VE', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -78,7 +78,7 @@ const formatearFechaDos = (fecha) => {
 const formatearFecha = (fecha) => {
     if (!fecha) return 'No definida'
     const date = new Date(fecha)
-    return date.toLocaleDateString('es-ES', {
+    return date.toLocaleDateString('es-VE', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -350,23 +350,37 @@ const createProyecto = async () => {
     }
 }
 
+// ==========================================
+// CARGAR PROYECTOS CON CLIENTES (CONTRATOS)
+// ==========================================
 const getProyectos = async () => {
     loadingProyectos.value = true
     try {
-        const res = await api.get('/api/proyectos')
-        proyectos_list.value = res.data
+        // Cargar Proyectos y Contratos en paralelo
+        const [resProyectos, resContratos] = await Promise.all([
+            api.get('/api/proyectos'),
+            api.get('/api/contratos')
+        ])
+
+        const contratos = resContratos.data
+        
+        // Mapear el cliente al proyecto
+        proyectos_list.value = resProyectos.data.map(proyecto => {
+            // Buscamos si este proyecto tiene contrato
+            const contratoAsociado = contratos.find(c => c.id_proyecto === proyecto.id_proyecto)
+            
+            return {
+                ...proyecto,
+                // Si existe contrato, asignamos el nombre del cliente, si no null
+                nombre_cliente: contratoAsociado ? contratoAsociado.nombre_cliente : null
+            }
+        })
+
     } catch (err) {
-        console.log('Error al cargar los proyectos: ', err)
+        console.log('Error al cargar los datos: ', err)
+        displayToast('Error al cargar la información', 'error')
     } finally {
         loadingProyectos.value = false
-    }
-}
-
-const deleteProyecto = async () => {
-    try {
-        console.log('Proyecto eliminado')
-    } catch (err) {
-        console.log('Error al eliminar el proyecto: ', err)
     }
 }
 
@@ -668,6 +682,17 @@ onMounted(() => {
                     <div class="space-y-4">
                         <h4 class="font-semibold text-gray-700 border-b pb-2">Información General</h4>
                         <div class="grid grid-cols-2 gap-y-4 text-sm">
+                            <div class="text-gray-500">Cliente:</div>
+                            <div class="font-medium text-gray-800 flex items-center gap-1">
+                                <Icon icon="mdi:account-tie" class="text-blue-500" />
+                                <span v-if="proyectoSeleccionado.nombre_cliente">
+                                    {{ proyectoSeleccionado.nombre_cliente }}
+                                </span>
+                                <span v-else class="text-gray-400 italic">
+                                    Sin contrato vinculado
+                                </span>
+                            </div>
+
                             <div class="text-gray-500">Tipo:</div>
                             <div class="font-medium text-gray-800">
                                 {{ proyectoSeleccionado.nombre_tipo || 'Desconocido' }}
@@ -703,10 +728,8 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- GRID: LOCACIONES / RECURSOS / PERSONAL -->
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- LOCACIONES -->
-                    <div class="relative z-[1]">
+                    <div class="relative z-1">
                         <div class="flex justify-between items-center border-b pb-2 mb-3">
                             <h4 class="font-semibold text-gray-700">Locaciones Asignadas</h4>
 
@@ -776,7 +799,7 @@ onMounted(() => {
                     </div>
 
                     <!-- RECURSOS -->
-                    <div class="relative z-[1] overflow-visible">
+                    <div class="relative z-1 overflow-visible">
                         <div class="flex justify-between items-center border-b pb-2 mb-3">
                             <h4 class="font-semibold text-gray-700">Recursos Asignados</h4>
 
@@ -873,7 +896,7 @@ onMounted(() => {
                     </div>
 
                     <!-- PERSONAL -->
-                    <div class="relative z-[50] overflow-visible">
+                    <div class="relative z-50 overflow-visible">
                         <div class="flex justify-between items-center border-b pb-2 mb-3">
                             <h4 class="font-semibold text-gray-700">Personal Asignado</h4>
 
