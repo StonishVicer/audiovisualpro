@@ -154,27 +154,32 @@ onMounted(() => {
         </div>
 
         <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-sm min-h-[400px]">
-            <div v-if="loadingData" class="flex justify-center items-center h-40 text-blue-500 font-medium">
-                <Icon icon="eos-icons:loading" class="mr-2" /> Cargando contratos...
+            <div v-if="loadingData">
+                <div class="flex items-center justify-center text-center mt-3">
+                    <div class="flex text-[15px] font-semibold text-blue-500 items-center justify-center w-full bg-blue-100 border border-blue-200 p-3 mx-3 rounded-xl shadow-md">
+                        <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                        Cargando contratos...
+                    </div>
+                </div>
             </div>
 
             <div v-else-if="contratos.length > 0">
-                <table class="table-auto w-full text-sm">
-                    <thead class="sticky top-0 bg-green-50">
-                        <tr class="text-green-800">
-                            <th class="px-4 py-3 text-left font-semibold">ID</th>
-                            <th class="px-4 py-3 text-left font-semibold">Proyecto Vinculado</th>
-                            <th class="px-4 py-3 text-left font-semibold">Cliente Contratante</th>
-                            <th class="px-4 py-3 text-left font-semibold">Fecha Firma</th>
-                            <th class="px-4 py-3 text-right font-semibold">Monto Total</th>
-                            <th class="px-4 py-3 text-center font-semibold">Acciones</th>
+                <table class="table-auto w-full">
+                    <thead>
+                        <tr class="bg-green-100 text-green-900">
+                            <th class="px-4 py-2 text-left font-bold">ID</th>
+                            <th class="px-4 py-2 text-left font-bold">Proyecto</th>
+                            <th class="px-4 py-2 text-left font-bold">Cliente Contratante</th>
+                            <th class="px-4 py-2 text-left font-bold">Fecha Firma</th>
+                            <th class="px-4 py-2 text-right font-bold">Monto Total</th>
+                            <th class="px-4 py-2 text-center font-bold">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="contrato in contratos" :key="contrato.id_contrato"
                             class="border-b border-gray-100 hover:bg-green-50/50 transition duration-150">
                             
-                            <td class="px-4 py-3 font-mono text-gray-500">#{{ contrato.id_contrato }}</td>
+                            <td class="px-4 py-3 font-mono text-gray-500">{{ contrato.id_contrato }}</td>
                             
                             <td class="px-4 py-3 font-medium text-gray-800">
                                 {{ contrato.nombre_proyecto || 'Cargando...' }}
@@ -210,9 +215,13 @@ onMounted(() => {
                 </table>
             </div>
 
-            <div v-else class="flex flex-col items-center justify-center h-64 text-gray-400">
-                <Icon icon="mdi:file-document-off" width="48" height="48" class="mb-2 opacity-50"/>
-                <p>No hay contratos registrados aún.</p>
+            <div v-else>
+                <div class="flex items-center justify-center text-center mt-3">
+                    <div class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                        <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                        No hay contratos registrados.
+                    </div>
+                </div>
             </div>
         </div>
 
