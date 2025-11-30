@@ -6,21 +6,15 @@ import api from '../../../services/api.js'
 import Toast from '../../../components/Toast.vue'
 import Modal from '../../../components/Modal.vue'
 
-// =======================
-// STATE PRINCIPAL
-// =======================
 const proyectos_list = ref([])
 
-// STATUS
 const error = ref(false)
 const isConnecting = ref(false)
 const loadingProyectos = ref(false)
 
-// OPTIONS
 const tiposProyectos = ref([])
 const estadosProyectos = ref([])
 
-// FORM NUEVO PROYECTO
 const nombre_proyecto = ref('')
 const id_tipo_proyecto = ref(null)
 const id_estado_proyecto = ref(null)
@@ -28,17 +22,14 @@ const fechaInicio = ref('')
 const fechaFinEstimada = ref('')
 const presupuesto = ref(0)
 
-// MODAL DETALLES
 const showModalDetalles = ref(false)
 const proyectoSeleccionado = ref({})
 
-// LOCACIONES
 const locDisponibles = ref([])
 const idLocSeleccionada = ref(null)
 const mostrarFormAsignacion = ref(false)
 const loadingLoc = ref(false)
 
-// RECURSOS TÉCNICOS
 const mostrarFormAsigRecurso = ref(false)
 const recDisponibles = ref([])
 const loadingRec = ref(false)
@@ -46,7 +37,6 @@ const idRecSeleccionado = ref(null)
 const fechaInicioRec = ref('')
 const fechaFinRec = ref('')
 
-// TOAST
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
@@ -62,9 +52,6 @@ const displayToast = (message, type) => {
 
 const showModal = ref(false)
 
-// =======================
-// FORMATEO DE FECHAS
-// =======================
 const formatearFechaDos = (fecha) => {
     if (!fecha) return 'No definida'
     const date = new Date(fecha)
@@ -117,9 +104,6 @@ const validarFormulario = () => {
     return false
 }
 
-// =======================
-// CARGAS BÁSICAS
-// =======================
 const cargarLocaciones = async () => {
     try {
         const res = await api.get('/api/locacion')
@@ -141,9 +125,6 @@ const cargarRecTecnicos = async () => {
     }
 }
 
-// =======================
-// ASIGNAR / DESASIGNAR RECURSOS
-// =======================
 const asignarRecursoTecnico = async () => {
     if (!idRecSeleccionado.value || !fechaInicioRec.value || !fechaFinRec.value) {
         displayToast('Debe de seleccionar un recurso técnico y asignar las fechas de inicio y fin', 'error')
@@ -216,9 +197,6 @@ const desasignarRecursoTecnico = async (idRecurso, nombreRecurso) => {
     }
 }
 
-// =======================
-// ASIGNAR / DESASIGNAR LOCACIÓN
-// =======================
 const asignarLocacion = async () => {
     if (!idLocSeleccionada.value) return
 
@@ -284,9 +262,6 @@ const desasignarLocacion = async (nombreLocacion) => {
     }
 }
 
-// =======================
-// TIPOS / ESTADOS / CRUD PROYECTO
-// =======================
 const cargarTiposProyectos = async () => {
     try {
         const res = await api.get('/api/tiposproyecto')
@@ -350,28 +325,21 @@ const createProyecto = async () => {
     }
 }
 
-// ==========================================
-// CARGAR PROYECTOS CON CLIENTES (CONTRATOS)
-// ==========================================
 const getProyectos = async () => {
     loadingProyectos.value = true
     try {
-        // Cargar Proyectos y Contratos en paralelo
         const [resProyectos, resContratos] = await Promise.all([
             api.get('/api/proyectos'),
             api.get('/api/contratos')
         ])
 
         const contratos = resContratos.data
-        
-        // Mapear el cliente al proyecto
+
         proyectos_list.value = resProyectos.data.map(proyecto => {
-            // Buscamos si este proyecto tiene contrato
             const contratoAsociado = contratos.find(c => c.id_proyecto === proyecto.id_proyecto)
             
             return {
                 ...proyecto,
-                // Si existe contrato, asignamos el nombre del cliente, si no null
                 nombre_cliente: contratoAsociado ? contratoAsociado.nombre_cliente : null
             }
         })
@@ -384,9 +352,6 @@ const getProyectos = async () => {
     }
 }
 
-// =======================
-// ASIGNACIÓN DE PERSONAL
-// =======================
 const personalDisponibles = ref([])
 const asignacionesPersonal = ref([])
 
@@ -479,9 +444,6 @@ const desasignarPersonalProyecto = async (idAsignacion, nombreMostrado) => {
     }
 }
 
-// =======================
-// ABRIR DETALLES PROYECTO
-// =======================
 const abrirDetalles = async (proyecto) => {
     proyectoSeleccionado.value = {
         ...proyecto,
@@ -502,9 +464,6 @@ const abrirDetalles = async (proyecto) => {
     }
 }
 
-// =======================
-// MOUNT
-// =======================
 onMounted(() => {
     cargarTiposProyectos()
     cargarEstadosProyectos()
@@ -584,7 +543,6 @@ onMounted(() => {
             </div>
         </div>
 
-        <!-- MODAL NUEVO PROYECTO -->
         <Modal v-if="showModal" :show="showModal" @close="showModal = false" title="Nuevo Proyecto" size="md">
             <div>
                 <div v-if="error"
@@ -660,7 +618,6 @@ onMounted(() => {
             </div>
         </Modal>
 
-        <!-- MODAL DETALLES PROYECTO -->
         <Modal v-if="showModalDetalles" :show="showModalDetalles" title="Detalles del Proyecto" size="xl"
             @close="showModalDetalles = false">
             <div class="space-y-6">
@@ -798,7 +755,6 @@ onMounted(() => {
                         </transition>
                     </div>
 
-                    <!-- RECURSOS -->
                     <div class="relative z-1 overflow-visible">
                         <div class="flex justify-between items-center border-b pb-2 mb-3">
                             <h4 class="font-semibold text-gray-700">Recursos Asignados</h4>
@@ -895,7 +851,6 @@ onMounted(() => {
                         </transition>
                     </div>
 
-                    <!-- PERSONAL -->
                     <div class="relative z-50 overflow-visible">
                         <div class="flex justify-between items-center border-b pb-2 mb-3">
                             <h4 class="font-semibold text-gray-700">Personal Asignado</h4>
@@ -907,7 +862,6 @@ onMounted(() => {
                             </button>
                         </div>
 
-                        <!-- Lista personal -->
                         <div class="flex flex-col gap-2 mb-3">
                             <template v-if="asignacionesPersonal && asignacionesPersonal.length">
                                 <div v-for="asig in asignacionesPersonal" :key="asig.id_asignacion"
@@ -938,7 +892,6 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <!-- Form personal -->
                         <transition name="fade">
                             <div v-if="mostrarFormAsigPersonal"
                                 class="bg-purple-50/50 p-3 rounded-lg border border-purple-100 mt-2">
