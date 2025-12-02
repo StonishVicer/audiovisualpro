@@ -14,6 +14,12 @@ import personalRoutes from './routes/personal.routes.js'
 import asignacionPersonalRoutes from './routes/asignacionpersonal.routes.js'
 import proyectosRoutes from "./routes/proyecto.routes.js";
 import contratosRoutes from './routes/contratos.routes.js'
+import pagosRoutes from './routes/pagos.routes.js'
+import facturasRoutes from './routes/facturas.routes.js' 
+import gastosRoutes from './routes/gasto.routes.js';
+
+
+
 
 dotenv.config()
 const app = express()
@@ -35,6 +41,9 @@ app.use('/api/asignaciones', asignacionPersonalRoutes)
 app.use('/api/proyectos', proyectosRoutes)
 
 app.use('/api/contratos', contratosRoutes)
+app.use('/api/pagos_personal', pagosRoutes)
+app.use('/api/facturas', facturasRoutes)
+app.use('/api/gastos', gastosRoutes);
 
 const PORT = process.env.PORT || 3000
 

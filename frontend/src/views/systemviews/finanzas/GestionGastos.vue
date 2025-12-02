@@ -1,113 +1,140 @@
-<template> Gestion Gastos 
-  <div class="h-screen flex flex-col">
-    <div class="border-b border-gray-200 pb-3 mb-4">
-      <h3 class="text-center font-bold text-lg">Gestión de Gastos</h3>
+<template>
+  <div class="h-screen flex flex-col bg-gray-50">
+    <div class="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+      <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+        <Icon icon="mdi:cash-multiple" class="text-green-600" />
+        Gestión de Gastos
+      </h3>
     </div>
 
-    <div class="mb-3 flex justify-between items-center">
-      <div class="flex space-x-2">
-        <input
-          v-model="query"
-          type="text"
-          placeholder="Buscar gasto, proyecto o descripción"
-          class="transition w-[420px] border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-        />
+    <div class="px-6 py-4">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="relative w-full md:w-96">
+          <Icon icon="mdi:magnify" class="absolute left-3 top-3 text-gray-400" />
+          <input
+            v-model="query"
+            type="text"
+            placeholder="Buscar gasto, contrato o categoría..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-sm"
+          />
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button @click="getGastos" class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Refrescar">
+                <Icon icon="material-symbols:refresh" width="24" height="24" />
+            </button>
+            <button @click="openNew" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                <Icon icon="mdi:plus" width="20" height="20" /> Registrar Gasto
+            </button>
+        </div>
       </div>
+    </div>
 
-      <div class="flex items-center gap-2">
-        <button @click="openNew" class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg">
-          <Icon icon="mdi:plus" width="20" height="20" class="mr-2" /> Nuevo Gasto
-        </button>
-        <button @click="getGastos" class="flex items-center bg-gray-500 hover:bg-gray-600 text-white font-semibold p-2 rounded-lg">
-          <Icon icon="material-symbols:refresh" width="20" height="20" />
-        </button>
+    <div class="flex-1 overflow-auto px-6 pb-6">
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        
+        <div v-if="loading" class="p-10 flex flex-col items-center justify-center text-gray-500">
+           <Icon icon="svg-spinners:180-ring-with-bg" width="40" height="40" class="text-green-500 mb-2" />
+           <span>Cargando gastos...</span>
+        </div>
+
+        <table v-else-if="filtered.length > 0" class="w-full text-sm text-left">
+          <thead class="bg-gray-100 text-gray-700 uppercase font-semibold text-xs">
+            <tr>
+              <th class="px-6 py-3">Fecha</th>
+              <th class="px-6 py-3">Contrato</th> 
+              <th class="px-6 py-3">Categoría</th>
+              <th class="px-6 py-3">Descripción</th>
+              <th class="px-6 py-3 text-right">Monto</th>
+              <th class="px-6 py-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+             <tr v-for="gasto in filtered" :key="gasto.id_gasto" class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 text-gray-600">{{ formatDate(gasto.fecha_gasto) }}</td>
+                <td class="px-6 py-4 font-medium text-gray-800">{{ gasto.nombre_contrato || '—' }}</td>
+                <td class="px-6 py-4">
+                  <span class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-semibold border border-green-100">
+                    {{ gasto.nombre_categoria }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-gray-600 truncate max-w-xs" :title="gasto.descripcion_gasto">
+                    {{ gasto.descripcion_gasto }}
+                </td>
+                <td class="px-6 py-4 text-right font-bold text-gray-700">
+                    ${{ Number(gasto.monto_gasto).toFixed(2) }}
+                </td>
+                <td class="px-6 py-4 flex justify-center gap-2">
+                   <button @click="openEdit(gasto)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Editar">
+                     <Icon icon="material-symbols:edit" width="20" />
+                   </button>
+                   <button @click="deleteGasto(gasto.id_gasto)" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Eliminar">
+                     <Icon icon="material-symbols:delete" width="20" />
+                   </button>
+                </td>
+             </tr>
+          </tbody>
+        </table>
+        
+        <div v-else class="p-12 flex flex-col items-center text-gray-400">
+           <Icon icon="mdi:cash-remove" width="60" height="60" class="mb-2 opacity-50" />
+           <p>No se encontraron gastos registrados.</p>
+        </div>
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg min-h-[300px] max-h-[calc(100vh-240px)] p-2">
-      <div v-if="loadingGastos" class="p-4 text-center text-gray-600">Cargando gastos...</div>
+    <Modal v-if="showModal" :show="showModal" @close="closeModal" :title="isEditing ? 'Editar Gasto' : 'Nuevo Gasto'">
+      <div class="px-1">
+        <form @submit.prevent="saveGasto" class="space-y-4">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contrato Asociado</label>
+                <select v-model="form.id_contrato" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500">
+                   <option value="" disabled>-- Seleccionar Contrato --</option>
+                   <option v-for="c in contratos" :key="c.id_contrato" :value="c.id_contrato">
+                      {{ c.descripcion || c.nombre_contrato || 'Contrato #' + c.id_contrato }}
+                   </option>
+                </select>
+             </div>
+             
+             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha del Gasto</label>
+                <input v-model="form.fecha_gasto" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500" />
+             </div>
+          </div>
 
-      <table v-else-if="filtered.length" class="table-auto w-full">
-        <thead>
-          <tr class="bg-gray-100 text-gray-800">
-            <th class="px-4 py-2 text-left">ID</th>
-            <th class="px-4 py-2 text-left">Proyecto</th>
-            <th class="px-4 py-2 text-left">Categoría</th>
-            <th class="px-4 py-2 text-left">Descripción</th>
-            <th class="px-4 py-2 text-left">Monto</th>
-            <th class="px-4 py-2 text-left">Fecha</th>
-            <th class="px-4 py-2 text-left">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="g in filtered" :key="g.id_gasto" class="border-b hover:bg-gray-50">
-            <td class="px-4 py-2">{{ g.id_gasto }}</td>
-            <td class="px-4 py-2">{{ g.proyecto?.nombre_proyecto ?? g.id_proyecto ?? '—' }}</td>
-            <td class="px-4 py-2">{{ g.categoria?.nombre_categoria ?? g.id_categoria_gasto ?? '—' }}</td>
-            <td class="px-4 py-2">{{ g.descripcion_gasto }}</td>
-            <td class="px-4 py-2">${{ Number(g.monto_gasto).toFixed(2) }}</td>
-            <td class="px-4 py-2">{{ formatDate(g.fecha_gasto) }}</td>
-            <td class="px-4 py-2 flex gap-2">
-              <button @click="openEdit(g)" class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded">Editar</button>
-              <button @click="deleteGasto(g.id_gasto)" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">Eliminar</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                <select v-model="form.id_categoria_gasto" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500">
+                   <option value="" disabled>-- Seleccionar --</option>
+                   <option v-for="c in categorias" :key="c.id_categoria_gasto" :value="c.id_categoria_gasto">
+                      {{ c.nombre_categoria }}
+                   </option>
+                </select>
+             </div>
 
-      <div v-else class="text-center text-gray-600 p-6">No hay gastos registrados.</div>
-    </div>
-
-    <Modal size="sm" v-if="showModal" :show="showModal" @close="closeModal" :title="isEditing ? 'Editar Gasto' : 'Nuevo Gasto'">
-      <div>
-        <div v-if="error" class="mb-3 p-3 bg-red-100 text-red-700 rounded">Complete los campos requeridos.</div>
-
-        <form @submit.prevent="saveGasto" class="space-y-3">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-sm font-semibold text-gray-500">Proyecto</label>
-              <select v-model="form.id_proyecto" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
-                <option value="">-- Seleccionar proyecto --</option>
-                <option v-for="p in proyectos" :key="p.id_proyecto" :value="p.id_proyecto">{{ p.nombre_proyecto }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="text-sm font-semibold text-gray-500">Categoría</label>
-              <select v-model="form.id_categoria_gasto" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
-                <option value="">-- Seleccionar categoría --</option>
-                <option v-for="c in categorias" :key="c.id_categoria_gasto" :value="c.id_categoria_gasto">{{ c.nombre_categoria }}</option>
-              </select>
-            </div>
+             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Monto ($)</label>
+                <input v-model.number="form.monto_gasto" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500 text-right font-medium" placeholder="0.00" />
+             </div>
           </div>
 
           <div>
-            <label class="text-sm font-semibold text-gray-500">Descripción</label>
-            <input v-model="form.descripcion_gasto" type="text" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">Descripción / Detalle</label>
+            <textarea v-model="form.descripcion_gasto" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" placeholder="Ej: Pago de personal extra por horas nocturnas..."></textarea>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-sm font-semibold text-gray-500">Monto</label>
-              <input v-model.number="form.monto_gasto" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" />
-            </div>
-
-            <div>
-              <label class="text-sm font-semibold text-gray-500">Fecha</label>
-              <input v-model="form.fecha_gasto" type="date" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" />
-            </div>
-          </div>
-
-          <div class="flex gap-2">
-            <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded">
-              {{ isEditing ? 'Actualizar gasto' : 'Crear gasto' }}
+          <div class="flex gap-3 pt-2">
+            <button type="button" @click="closeModal" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition font-medium">Cancelar</button>
+            <button type="submit" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-bold shadow-md transition">
+                {{ isEditing ? 'Guardar Cambios' : 'Registrar Gasto' }}
             </button>
-            <button type="button" @click="closeModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded">Cancelar</button>
           </div>
         </form>
       </div>
     </Modal>
-
     <Toast v-model="isLoading" message="Procesando..." type="loading" />
   </div>
 </template>
@@ -119,164 +146,129 @@ import Modal from '../../../components/Modal.vue'
 import Toast from '../../../components/Toast.vue'
 import api from '../../../services/api.js'
 
+// States
 const gastos = ref([])
-const proyectos = ref([])
-const categorias = ref([])
-const loadingGastos = ref(false)
+const contratos = ref([]) // CAMBIO: Proyectos -> Contratos
+const categorias = ref([]) 
+const loading = ref(false)
 const isLoading = ref(false)
-const error = ref(false)
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
 const query = ref('')
 
 const form = ref({
-  id_proyecto: '',
-  descripcion_gasto: '',
+  id_contrato: '', // CAMBIO: id_proyecto -> id_contrato
   id_categoria_gasto: '',
-  monto_gasto: 0,
-  fecha_gasto: new Date().toISOString().slice(0,10),
+  descripcion_gasto: '',
+  monto_gasto: '',
+  fecha_gasto: new Date().toISOString().slice(0,10)
 })
 
+// Computed
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return gastos.value
-  return gastos.value.filter(g =>
-    String(g.descripcion_gasto || '').toLowerCase().includes(q) ||
-    String(g.proyecto?.nombre_proyecto || g.id_proyecto || '').toLowerCase().includes(q) ||
-    String(g.categoria?.nombre_categoria || g.id_categoria_gasto || '').toLowerCase().includes(q)
+  return gastos.value.filter(g => 
+    (g.descripcion_gasto || '').toLowerCase().includes(q) ||
+    (g.nombre_contrato || '').toLowerCase().includes(q) || // CAMBIO: Filtro por nombre_contrato
+    (g.nombre_categoria || '').toLowerCase().includes(q)
   )
 })
 
-const getProyectos = async () => {
-  try {
-    const res = await api.get('/api/proyectos')
-    proyectos.value = res.data
-  } catch (e) {
-    console.error('No se pudieron obtener proyectos', e)
-    proyectos.value = []
-  }
-}
-
-const getCategorias = async () => {
-  try {
-    const res = await api.get('/api/categorias_gastos')
-    categorias.value = res.data
-  } catch (e) {
-    console.error('No se pudieron obtener categorías', e)
-    categorias.value = []
-  }
+// API Calls
+const fetchData = async () => {
+    loading.value = true
+    try {
+        // CAMBIO: Carga contratos en lugar de proyectos
+        const [resGastos, resContratos, resCat] = await Promise.all([
+            api.get('/api/gastos'),
+            api.get('/api/contratos'), 
+            api.get('/api/gastos/categorias') 
+        ])
+        gastos.value = resGastos.data
+        contratos.value = resContratos.data
+        categorias.value = resCat.data
+    } catch (e) {
+        console.error("Error cargando datos", e)
+    } finally {
+        loading.value = false
+    }
 }
 
 const getGastos = async () => {
-  loadingGastos.value = true
-  try {
-    const res = await api.get('/api/gastos')
-    gastos.value = res.data
-  } catch (e) {
-    console.error('Error al obtener gastos', e)
-    gastos.value = []
-  } finally {
-    loadingGastos.value = false
-  }
+    try {
+        const res = await api.get('/api/gastos')
+        gastos.value = res.data
+    } catch (e) { console.error(e) }
 }
 
+// Actions
 const openNew = () => {
-  resetForm()
-  isEditing.value = false
-  editingId.value = null
-  showModal.value = true
+    resetForm()
+    isEditing.value = false
+    showModal.value = true
 }
 
-const openEdit = (g) => {
-  isEditing.value = true
-  editingId.value = g.id_gasto
-  form.value.id_proyecto = g.id_proyecto ?? (g.proyecto?.id_proyecto ?? '')
-  form.value.descripcion_gasto = g.descripcion_gasto ?? ''
-  form.value.id_categoria_gasto = g.id_categoria_gasto ?? (g.categoria?.id_categoria_gasto ?? '')
-  form.value.monto_gasto = Number(g.monto_gasto ?? 0)
-  form.value.fecha_gasto = g.fecha_gasto ? g.fecha_gasto.split('T')[0] : new Date().toISOString().slice(0,10)
-  showModal.value = true
+const openEdit = (item) => {
+    isEditing.value = true
+    editingId.value = item.id_gasto
+    form.value = {
+        id_contrato: item.id_contrato, // CAMBIO: Mapeo id_contrato
+        id_categoria_gasto: item.id_categoria_gasto,
+        descripcion_gasto: item.descripcion_gasto,
+        monto_gasto: item.monto_gasto,
+        fecha_gasto: item.fecha_gasto ? item.fecha_gasto.split('T')[0] : ''
+    }
+    showModal.value = true
 }
 
-const closeModal = () => {
-  showModal.value = false
-  error.value = false
-}
+const closeModal = () => showModal.value = false
 
 const resetForm = () => {
-  form.value = {
-    id_proyecto: '',
-    descripcion_gasto: '',
-    id_categoria_gasto: '',
-    monto_gasto: 0,
-    fecha_gasto: new Date().toISOString().slice(0,10),
-  }
-}
-
-const validar = () => {
-  if (!form.value.id_proyecto || !form.value.id_categoria_gasto) return false
-  if (!form.value.descripcion_gasto || form.value.descripcion_gasto.trim().length === 0) return false
-  if (Number(form.value.monto_gasto) <= 0) return false
-  if (!form.value.fecha_gasto) return false
-  return true
+    form.value = {
+        id_contrato: '', // CAMBIO: Reset id_contrato
+        id_categoria_gasto: '',
+        descripcion_gasto: '',
+        monto_gasto: '',
+        fecha_gasto: new Date().toISOString().slice(0,10)
+    }
 }
 
 const saveGasto = async () => {
-  if (!validar()) {
-    error.value = true
-    return
-  }
-  error.value = false
-  isLoading.value = true
-
-  const payload = {
-    id_proyecto: form.value.id_proyecto,
-    descripcion_gasto: form.value.descripcion_gasto,
-    id_categoria_gasto: form.value.id_categoria_gasto,
-    monto_gasto: Number(form.value.monto_gasto),
-    fecha_gasto: form.value.fecha_gasto
-  }
-
-  try {
-    if (isEditing.value && editingId.value) {
-      await api.put(`/api/gastos/${editingId.value}`, payload)
-    } else {
-      const res = await api.post('/api/gastos', payload)
-      if (res && res.data) gastos.value.unshift(res.data)
+    // CAMBIO: Validación para id_contrato
+    if (!form.value.id_contrato || !form.value.monto_gasto || !form.value.id_categoria_gasto) {
+        return alert("Contrato, Categoría y Monto son obligatorios")
     }
-    await getGastos()
-    closeModal()
-  } catch (e) {
-    console.error('Error guardando gasto', e)
-  } finally {
-    isLoading.value = false
-  }
+    
+    isLoading.value = true
+    try {
+        if (isEditing.value) {
+            await api.put(`/api/gastos/${editingId.value}`, form.value)
+        } else {
+            await api.post('/api/gastos', form.value)
+        }
+        await getGastos()
+        closeModal()
+    } catch (e) {
+        console.error(e)
+        alert("Error al guardar el gasto")
+    } finally {
+        isLoading.value = false
+    }
 }
 
 const deleteGasto = async (id) => {
-  const ok = confirm('¿Está seguro/a de eliminar este gasto?')
-  if (!ok) return
-  isLoading.value = true
-  try {
-    await api.delete(`/api/gastos/${id}`)
-    gastos.value = gastos.value.filter(g => g.id_gasto !== id)
-  } catch (e) {
-    console.error('Error eliminando gasto', e)
-  } finally {
-    isLoading.value = false
-  }
+    if (!confirm("¿Eliminar este gasto?")) return
+    try {
+        await api.delete(`/api/gastos/${id}`)
+        gastos.value = gastos.value.filter(g => g.id_gasto !== id)
+    } catch (e) { console.error(e) }
 }
 
-const formatDate = (d) => {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString()
-}
+const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '—'
 
 onMounted(() => {
-  getProyectos()
-  getCategorias()
-  getGastos()
-  resetForm()
+    fetchData()
 })
 </script>
