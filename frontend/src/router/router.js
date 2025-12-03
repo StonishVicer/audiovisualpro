@@ -27,7 +27,8 @@ import SystemView from '../views/systemviews/SystemView.vue'
 
 //CLIENT VIEWS
 import ClientChat from '../views/clientviews/ClientChat.vue'
-import { compile } from 'vue'
+
+import NotFound from '../views/NotFound.vue' //NOT FOUND PAGE
 
 const routes = [
     {
@@ -40,6 +41,11 @@ const routes = [
         path: '/client/chat',
         name: 'Client Chat',
         component: ClientChat
+    },
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'Not Found',
+        component: NotFound
     },
     {
         path: '/system',
