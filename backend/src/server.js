@@ -20,11 +20,6 @@ import contratosRoutes from './routes/contratos.routes.js'
 import pagosRoutes from './routes/pagos.routes.js'
 import facturasRoutes from './routes/facturas.routes.js' 
 import gastosRoutes from './routes/gasto.routes.js';
-
-
-
-
-
 import entregablesRoutes from './routes/entregables.routes.js'
 import estadosEntregableRoutes from './routes/estadosEntregable.routes.js'
 

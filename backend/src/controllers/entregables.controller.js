@@ -1,4 +1,4 @@
-import { pool } from '../database/index.js'
+import { pool } from '../database/database.js'
 import fs from 'fs'
 import path from 'path'
 

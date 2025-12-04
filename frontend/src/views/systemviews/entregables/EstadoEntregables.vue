@@ -107,7 +107,7 @@ const handleSubmit = async () => {
             displayToast('Estado actualizado', 'success')
         } else {
             // Crear
-            const res = await api.post('/api/estados', payload)
+            const res = await api.post('/api/estadosentregable', payload)
             estados.value.push(res.data)
             displayToast('Estado creado', 'success')
         }
