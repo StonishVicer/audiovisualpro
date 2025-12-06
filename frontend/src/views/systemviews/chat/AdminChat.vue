@@ -15,7 +15,7 @@ const err = ref(false)
 const messagesContainer = ref(null);
 
 const getTime = () => {
-  return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
 };
 
 const scrollToBottom = () => {
@@ -123,7 +123,6 @@ onUpdated(() => {
             ]"
           >
             <Icon :icon="msg.isMine ? 'mdi:account-tie' : 'mdi:account'" />
-            <i :class="msg.isMine ? 'asd' : 'dsa'"></i>
           </div>
           <div :class="['flex flex-col space-y-1', msg.isMine ? 'items-end' : '']">
             <div

@@ -1,92 +1,83 @@
-<script>
-import { socket } from '../../services/socketService'; // Asegúrate de la ruta correcta
+<script setup>
+import { ref, onMounted, onUpdated, nextTick } from 'vue';
+import { Icon } from '@iconify/vue'
+import { socket } from '../../services/socketService';
 
-export default {
-  data() {
-    return {
-      myUserId: 'CLIENTE_A', // ID Fijo del ADMINISTRADOR
-      recipientId: 'ADMIN', // ID Fijo del Cliente con el que chatea
-      newMessage: '',
-      messages: [
-        // Aquí debes cargar tu historial inicial, o dejarlo vacío para que se llene dinámicamente
-      ],
-    };
-  },
-  mounted() {
-    this.connectSocket();
-    this.setupListeners();
-    this.scrollToBottom();
-  },
-  updated() {
-    this.scrollToBottom();
-  },
-  methods: {
-    getTime() {
-      return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    },
+const myUserId = ref('CLIENTE_A');
+const recipientId = ref('ADMIN');
+const newMessage = ref('');
+const messages = ref([]);
+const messagesContainer = ref(null);
 
-    connectSocket() {
-      // 1. Conectar y registrar
-      socket.connect();
-      socket.on('connect', () => {
-        socket.emit('register', this.myUserId);
-        console.log(`Conectado como: ${this.myUserId}`);
-      });
-    },
+const getTime = () => {
+  return new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+};
 
-    setupListeners() {
-      // 2. Escuchar mensajes entrantes (del Cliente)
-      socket.on('private_message', ({ senderId, message }) => {
-        // Si el mensaje es de la persona con la que estamos chateando, lo mostramos
-        if (senderId === this.recipientId) {
-             this.messages.push({
-                senderId: senderId,
-                text: message,
-                isMine: false, // Mensaje del Cliente
-                time: this.getTime()
-            });
-        }
-      });
+const scrollToBottom = () => {
+  nextTick(() => {
+    const container = messagesContainer.value;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  });
+};
 
-      // 3. Confirmación de mensaje enviado (del servidor a mí mismo)
-      socket.on('message_sent', ({ message }) => {
-        this.messages.push({
-          senderId: this.myUserId,
-          text: message,
-          isMine: true, // Mensaje propio
-          time: this.getTime()
-        });
-        this.newMessage = ''; 
-      });
-      
-      // ... (Aquí iría la lógica para el evento 'typing' si la implementas)
-    },
+const connectSocket = () => {
+  socket.connect();
+  socket.on('connect', () => {
+    socket.emit('register', myUserId.value);
+    console.log(`Conectado como: ${myUserId.value}`);
+  });
+};
 
-    sendMessage() {
-      if (!this.newMessage.trim() || !this.recipientId) return;
-
-      const data = {
-        receiverId: this.recipientId,
-        message: this.newMessage.trim()
-      };
-
-      // Emitir el evento al servidor
-      socket.emit('private_message', data);
-    },
-    
-    scrollToBottom() {
-      this.$nextTick(() => {
-        const container = this.$refs.messagesContainer;
-        if (container) {
-          container.scrollTop = container.scrollHeight;
-        }
+const setupListeners = () => {
+  socket.on('private_message', ({ senderId, message }) => {
+    if (senderId === recipientId.value) {
+      messages.value.push({
+        senderId: senderId,
+        text: message,
+        isMine: false,
+        time: getTime()
       });
     }
-  }
+  });
+
+  socket.on('message_sent', ({ message }) => {
+    messages.value.push({
+      senderId: myUserId.value,
+      text: message,
+      isMine: true,
+      time: getTime()
+    });
+    newMessage.value = '';
+  });
 };
+
+const sendMessage = () => {
+  if (!newMessage.value.trim() || !recipientId.value) return;
+
+  const data = {
+    receiverId: recipientId.value,
+    message: newMessage.value.trim()
+  };
+
+  socket.emit('private_message', data);
+};
+
+onMounted(() => {
+  connectSocket();
+  setupListeners();
+});
+
+onUpdated(() => {
+  scrollToBottom();
+});
 </script>
 
 <template>
+  <div class="w-full bg-white rounded-2xl shadow-lg p-5 border border-green-100 overflow-hidden">
+    
+  </div>
   <div class="min-h-screen bg-[#F5FFF5] flex justify-center items-center p-5">
     <div
       class="bg-white rounded-[15px] shadow-xl w-full max-w-2xl h-[600px] flex flex-col overflow-hidden"
@@ -98,14 +89,8 @@ export default {
           <i class="fas fa-comments text-xl text-white"></i>
           <div class="flex flex-col">
             <h3 class="m-0 font-semibold text-lg">Chat con Administrador</h3>
-            <span class="text-sm text-white/80">En línea</span>
           </div>
         </div>
-        <button
-          class="bg-white/15 border border-white/40 text-white rounded-lg p-2 transition duration-300 hover:bg-white/25"
-        >
-          <i class="fas fa-times"></i>
-        </button>
       </div>
 
       <div
@@ -122,10 +107,11 @@ export default {
         >
           <div
             :class="[
-              'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white text-lg',
+              'ml-3 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white text-lg',
               msg.isMine ? 'bg-[#19C848]' : 'bg-[#BBBBBB]',
             ]"
           >
+            <Icon :icon="msg.isMine ? 'mdi:account' : 'mdi:account-tie'" width="25" height="25" />
             <i :class="msg.isMine ? 'fas fa-user' : 'fas fa-user-tie'"></i>
           </div>
           <div :class="['flex flex-col space-y-1', msg.isMine ? 'items-end' : '']">
