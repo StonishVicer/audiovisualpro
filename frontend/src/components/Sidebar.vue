@@ -151,6 +151,10 @@ const logout = () => {
                     </div>
                 </template>
                 <div class="border-t border-gray-200">
+                    <RouterLink to="/system/configuracion" class="cursor-pointer mt-2 flex items-center font-semibold p-2 rounded-lg hover:bg-gray-500 hover:text-white transition">
+                        <Icon icon="icon-park-solid:config" width="25" height="25" class="mr-2" />
+                        <span v-if="isOpen">Configuracion</span>
+                    </RouterLink>
                     <button
                         @click="logout"
                         :class="[

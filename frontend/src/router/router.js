@@ -24,6 +24,7 @@ import SystemView from '../views/systemviews/SystemView.vue'
     /*REPORTES FINANCIEROS*/ import ReportesFinancieros from '../views/systemviews/finanzas/ReportesFinancieros.vue'
     /*CHAT */ import AdminChat from '../views/systemviews/chat/AdminChat.vue'
     /*TIPOS RECURSOS*/ import TiposRecursos from '../views/systemviews/locaciones_recursos/TiposRecursos.vue'
+    /*CONFIGURACION */ import Configuracion from '../views/systemviews/configuracion/Configuracion.vue'
 
 //CLIENT VIEWS
 import ClientChat from '../views/clientviews/ClientChat.vue'
@@ -146,6 +147,11 @@ const routes = [
                 path: '/system/chat',
                 name: 'Admin Chat',
                 component: AdminChat
+            },
+            {
+                path: '/system/configuracion',
+                name: 'Configuracion',
+                component: Configuracion
             }
         ]
     }
