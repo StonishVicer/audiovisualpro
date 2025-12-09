@@ -30,6 +30,7 @@
                         <td class="px-4 py-2">{{ recurso.nombre_tipo }}</td>
                         <td class="px-4 py-2 flex items-center gap-1">
                             <button
+                                @click="openEditModal(recurso)"
                                 class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
                                 <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" /> Editar
                             </button>
@@ -116,6 +117,53 @@
             @confirm="deleteRecursosTecnicos"
             @cancel="showConfirmation = false"
         />
+
+        <Modal
+            v-if="showEditModal" :show="showEditModal" @close="showEditModal = false"
+            size="sm"
+            title="Editar Recurso Tecnico"
+        >
+            <div>
+                <div v-if="editError" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                    <Icon icon="mdi:error" width="25" heigth="25" class="mr-2" />
+                    Complete todos los campos.
+                </div>
+
+                <form @submit.prevent="updateRecursoTecnico" class="mb-2">
+                    <div class="mb-2">
+                        <label for="nombre_edit" class="text-sm font-semibold text-gray-500 mb-1">Nombre</label>
+                        <input
+                            id="nombre_edit"
+                            type="text"
+                            v-model="currentRecurso.nombre_equipo"
+                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="Nombre"
+                            required
+                        >
+                    </div>
+                    <div class="mb-2">
+                        <label for="tipo_edit" class="text-sm font-semibold text-gray-500 mb-1">Tipo de Recurso</label>
+                        <select
+                            id="tipo_edit"
+                            v-model="currentRecurso.id_tipo_recurso"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 mt-1"
+                            required
+                        >
+                            <option v-for="tipo in tiposRecursos" :key="tipo.id_tipo_recurso" :value="tipo.id_tipo_recurso">{{ tipo.nombre_tipo }}</option>
+                        </select>
+                    </div>
+                    <button 
+                        type="submit" 
+                        :disabled="isUpdating"
+                        class="w-full flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors disabled:bg-blue-300">
+                        {{ isUpdating ? 'Actualizando...' : 'Guardar Cambios' }}
+                    </button>
+                </form>
+                <button @click="showEditModal = false" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors mt-2">
+                    Cancelar
+                </button>
+            </div>
+        </Modal>
     </div>
 </template>
 
@@ -134,12 +182,29 @@ const isConnecting = ref(false)
 const loadingRecursosTecnicos = ref(false)
 const error = ref(false)
 
+const showEditModal = ref(false)
+const isUpdating = ref(false)
+const editError = ref(false)
+
+const currentRecurso = ref({
+    id_recurso: null,
+    nombre_equipo: '',
+    id_tipo_recurso: null,
+    nombre_tipo: ''
+})
+
 const showConfirmation = ref(false)
 const recursoDeleteID = ref(null)
 
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
+
+const openEditModal = (recurso) => {
+    currentRecurso.value = { ...recurso }
+    editError.value = false
+    showEditModal.value = true
+}
 
 const requestDeleteRecursoTecnico = (id) => {
     recursoDeleteID.value = id
@@ -244,6 +309,49 @@ const deleteRecursosTecnicos = async () => {
         displayToast('Error al eliminar el recurso tecnico', 'error')
     } finally {
         isConnecting.value = false
+    }
+}
+
+const updateRecursoTecnico = async () => {
+    if (!currentRecurso.value.nombre_equipo.trim() || !currentRecurso.value.id_tipo_recurso) {
+        editError.value = true
+        return
+    }
+    editError.value = false
+    isUpdating.value = true
+
+    try {
+        const id = currentRecurso.value.id_recurso
+
+        const res = await api.put(`/api/recursostecnicos/${id}`, {
+            nombre_equipo: currentRecurso.value.nombre_equipo,
+            id_tipo_recurso: currentRecurso.value.id_tipo_recurso
+        })
+
+        const updatedData = res.data;
+        const tipoSeleccionado = tiposRecursos.value.find(tipo => tipo.id_tipo_recurso === updatedData.id_tipo_recurso);
+
+        const recursoActualizado = {
+            ...updatedData,
+            nombre_tipo: tipoSeleccionado ? tipoSeleccionado.nombre_tipo : 'Desconocido'
+        }
+
+        const index = recursos_tecnicos.value.findIndex(recurso => recurso.id_recurso === id)
+        if (index !== -1) {
+            recursos_tecnicos.value[index] = recursoActualizado
+        }
+
+        showEditModal.value = false
+        displayToast('Recurso actualizado con éxito', 'success')
+    } catch (err) {
+        console.error('Error al actualizar el recurso técnico:', err)
+        var errMsj = 'Error al actualizar el recurso tecnico.'
+        if (err.response?.status === 409) {
+            errMsj = 'No se puede actualizar el recurso tecnico. Esta vinculado a un proyecto.'
+        }
+        displayToast(errMsj, 'error')
+    } finally {
+        isUpdating.value = false
     }
 }
 

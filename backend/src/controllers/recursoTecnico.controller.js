@@ -64,3 +64,35 @@ export const deleteRecursoTecnico = async (req, res) => {
         res.status(500).json({ message: 'Error al eliminar el recurso tecnico' })
     }
 }
+
+export const updateRecursoTecnico = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre_equipo, id_tipo_recurso } = req.body;
+
+        const checkResult = await pool.query(
+            'SELECT COUNT(*) FROM uso_recurso WHERE id_recurso = $1',
+            [id]
+        )
+
+        const count = parseInt(checkResult.rows[0].count)
+
+        if (count > 0) {
+            return res.status(409).json({ message: 'No se puede editar el recurso tecnico, esta vinculado a un proyecto.' })
+        }
+
+        const result = await pool.query(
+            'UPDATE recurso_tecnico SET nombre_equipo = $1, id_tipo_recurso = $2 WHERE id_recurso = $3 RETURNING *',
+            [nombre_equipo, id_tipo_recurso, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Recurso técnico no encontrado para actualizar' });
+        }
+
+        return res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error al actualizar recurso técnico:', err);
+        return res.status(500).json({ message: 'Error al actualizar el recurso técnico' });
+    }
+}
