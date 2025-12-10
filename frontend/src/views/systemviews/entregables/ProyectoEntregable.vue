@@ -17,6 +17,7 @@ const titulo = ref('')
 const fileLink = ref('')
 const fecha_entrega = ref('')
 const file = ref(null)
+const selectedEstado = ref('')
 
 // --- UI STATES ---
 const showModal = ref(false)
@@ -72,6 +73,7 @@ const limpiarCampos = () => {
     fileLink.value = ''
     fecha_entrega.value = ''
     file.value = null
+    selectedEstado.value = ''
     id_entregable_editar.value = null
     error.value = false
     const fileInput = document.getElementById('file-upload')
@@ -131,6 +133,8 @@ const handleSubmit = async () => {
         fd.append('titulo', titulo.value)
         fd.append('link', fileLink.value)
         fd.append('fecha_entrega', fecha_entrega.value) // Agregamos fecha
+        // adjuntamos el estado seleccionado (si existe)
+        if (selectedEstado.value) fd.append('id_estado_entregable', selectedEstado.value)
         if (file.value) {
             fd.append('archivo', file.value)
         }
@@ -196,6 +200,7 @@ const openEditModal = (item) => {
     id_entregable_editar.value = item.id
     titulo.value = item.titulo
     fileLink.value = item.link || ''
+    selectedEstado.value = item.id_estado_entregable || ''
     // Convertimos fecha ISO a YYYY-MM-DD para el input date
     if(item.fecha_entrega) {
         fecha_entrega.value = item.fecha_entrega.split('T')[0]
@@ -319,6 +324,14 @@ onMounted(() => {
                     <div class="flex flex-col mb-4">
                         <label class="text-sm font-semibold text-gray-500 mb-1">Fecha de Entrega Estimada</label>
                         <input type="date" v-model="fecha_entrega" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+                    </div>
+
+                    <div class="flex flex-col mb-4">
+                        <label class="text-sm font-semibold text-gray-500 mb-1">Estado del Entregable</label>
+                        <select v-model="selectedEstado" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+                            <option value="">-- Sin seleccionar --</option>
+                            <option v-for="e in estados" :key="e.id_estado_entregable" :value="e.id_estado_entregable">{{ e.nombre_estado }}</option>
+                        </select>
                     </div>
 
                     <div class="flex flex-col mb-4">
