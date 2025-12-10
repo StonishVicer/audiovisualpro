@@ -42,7 +42,7 @@
           <thead class="bg-gray-100 text-gray-700 uppercase font-semibold text-xs">
             <tr>
               <th class="px-6 py-3">Fecha</th>
-              <th class="px-6 py-3">Contrato</th> 
+              <th class="px-6 py-3">Contrato / Proyecto</th> 
               <th class="px-6 py-3">Categoría</th>
               <th class="px-6 py-3">Descripción</th>
               <th class="px-6 py-3 text-right">Monto</th>
@@ -52,7 +52,10 @@
           <tbody class="divide-y divide-gray-200">
              <tr v-for="gasto in filtered" :key="gasto.id_gasto" class="hover:bg-gray-50 transition">
                 <td class="px-6 py-4 text-gray-600">{{ formatDate(gasto.fecha_gasto) }}</td>
-                <td class="px-6 py-4 font-medium text-gray-800">{{ gasto.nombre_contrato || '—' }}</td>
+                <td class="px-6 py-4 font-medium text-gray-800">
+                    <div>{{ gasto.nombre_cliente || '...' }}</div>
+                    <div class="text-xs text-gray-500">{{ gasto.nombre_proyecto }}</div>
+                </td>
                 <td class="px-6 py-4">
                   <span class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-semibold border border-green-100">
                     {{ gasto.nombre_categoria }}
@@ -93,7 +96,7 @@
                 <select v-model="form.id_contrato" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500">
                    <option value="" disabled>-- Seleccionar Contrato --</option>
                    <option v-for="c in contratos" :key="c.id_contrato" :value="c.id_contrato">
-                      {{ c.descripcion || c.nombre_contrato || 'Contrato #' + c.id_contrato }}
+                      {{ c.nombre_cliente }} — {{ c.nombre_proyecto || 'Contrato #' + c.id_contrato }}
                    </option>
                 </select>
              </div>

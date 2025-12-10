@@ -2,17 +2,15 @@ import { pool } from '../database/database.js'
 
 export const getPagos = async (req, res) => {
     try {
-        // YA NO HACEMOS JOIN CON ASIGNACIONES
         const query = `
             SELECT 
                 pp.id_pago, 
                 pp.id_personal,
-                pp.categoria_pg,  
+                /* pp.categoria_pg, -- Eliminado de la selección */  
                 pp.monto_pagado, 
                 pp.fecha_pago, 
                 pp.motivo_pago,
-                p.nombre_personal,
-                p.apellido_personal
+                p.nombre_personal
             FROM pagos_personal pp
             LEFT JOIN personal p ON pp.id_personal = p.id_personal
             ORDER BY pp.fecha_pago DESC
@@ -31,8 +29,7 @@ export const getPagoById = async (req, res) => {
         const query = `
             SELECT 
                 pp.*,
-                p.nombre_personal,
-                p.apellido_personal
+                p.nombre_personal
             FROM pagos_personal pp
             LEFT JOIN personal p ON pp.id_personal = p.id_personal
             WHERE pp.id_pago = $1
@@ -53,23 +50,25 @@ export const createPago = async (req, res) => {
     try {
         const { 
             id_personal, 
-            categoria_pg, // CAMBIO: Recibimos texto
+            // categoria_pg, // ELIMINADO
             monto_pagado, 
             fecha_pago, 
             motivo_pago 
         } = req.body
 
-        if (!id_personal || !categoria_pg || !monto_pagado || !fecha_pago) {
+        // Se quitó categoria_pg de la validación
+        if (!id_personal || !monto_pagado || !fecha_pago) {
             return res.status(400).json({ message: 'Faltan campos obligatorios' })
         }
 
+        // Se eliminó categoria_pg del INSERT y los values
         const query = `
             INSERT INTO pagos_personal 
-            (id_personal, categoria_pg, monto_pagado, fecha_pago, motivo_pago) 
-            VALUES ($1, $2, $3, $4, $5)
+            (id_personal, monto_pagado, fecha_pago, motivo_pago) 
+            VALUES ($1, $2, $3, $4)
             RETURNING *
         `
-        const values = [id_personal, categoria_pg, monto_pagado, fecha_pago, motivo_pago]
+        const values = [id_personal, monto_pagado, fecha_pago, motivo_pago]
         
         const { rows } = await pool.query(query, values)
         res.status(201).json(rows[0])
@@ -84,23 +83,24 @@ export const updatePago = async (req, res) => {
         const { id } = req.params
         const { 
             id_personal, 
-            categoria_pg, // CAMBIO
+            // categoria_pg, // ELIMINADO
             monto_pagado, 
             fecha_pago, 
             motivo_pago 
         } = req.body
 
+        // Se eliminó categoria_pg del UPDATE
         const query = `
             UPDATE pagos_personal 
             SET id_personal = $1, 
-                categoria_pg = $2, 
-                monto_pagado = $3, 
-                fecha_pago = $4, 
-                motivo_pago = $5
-            WHERE id_pago = $6
+                monto_pagado = $2, 
+                fecha_pago = $3, 
+                motivo_pago = $4
+            WHERE id_pago = $5
             RETURNING *
         `
-        const values = [id_personal, categoria_pg, monto_pagado, fecha_pago, motivo_pago, id]
+        // Se reordenaron los índices ($1, $2, etc.)
+        const values = [id_personal, monto_pagado, fecha_pago, motivo_pago, id]
         
         const { rows } = await pool.query(query, values)
 

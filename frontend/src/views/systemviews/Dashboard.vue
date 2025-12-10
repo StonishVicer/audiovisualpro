@@ -15,6 +15,7 @@ const proyectos = ref([])
 const roles = ref([])
 const recursos = ref([])
 const asignacionesPersonal = ref([])
+const financeStats = ref(null)
 
 const fetchData = async () => {
     try {
@@ -32,6 +33,10 @@ const fetchData = async () => {
 
         const asignacionesRes = await api.get('/api/asignaciones')
         asignacionesPersonal.value = asignacionesRes.data
+
+        const financeRes = await api.get('/api/stats/finance')
+        financeStats.value = financeRes.data
+
     } catch (err) {
         console.log('Error al cargar datos: ', err)
     }
@@ -211,6 +216,87 @@ const optionsPersonalAsignado = {
   }
 }
 
+// 4 - GASTOS POR CATEGORIA
+const chartGastosCategoria = computed(() => {
+    if (!financeStats.value || !financeStats.value.expensesByCategory) return { labels: [], datasets: [] };
+    
+    const cats = financeStats.value.expensesByCategory;
+    const labels = cats.map(c => c.nombre_categoria);
+    const data = cats.map(c => c.total);
+    
+    return {
+        labels,
+        datasets: [{
+            backgroundColor: ['#ff443d', '#ffc53d', '#57ff3d', '#3da8ff', '#8e3dff'],
+            data
+        }]
+    }
+});
+
+const optionsGastosCategoria = {
+  ...optionsGeneral,
+  plugins: {
+    ...optionsGeneral.plugins,
+    title: { display: true, text: 'Gastos por Categoría', font: { size: 16 } }
+  }
+}
+
+// 5 - INGRESOS VS GASTOS (Últimos meses)
+const chartIngresosGastos = computed(() => {
+    if (!financeStats.value || !financeStats.value.monthlyStats) return { labels: [], datasets: [] };
+    
+    const incomeStats = financeStats.value.monthlyStats.income;
+    const expenseStats = financeStats.value.monthlyStats.expenses;
+    
+    // Unir meses únicos
+    const months = new Set([
+        ...incomeStats.map(i => i.mes),
+        ...expenseStats.map(e => e.mes)
+    ]);
+    const sortedMonths = Array.from(months).sort((a,b) => a - b);
+    
+    const labels = sortedMonths.map(m => {
+        const date = new Date();
+        date.setMonth(m - 1);
+        return date.toLocaleString('es-ES', { month: 'short' });
+    });
+    
+    const incomeData = sortedMonths.map(m => {
+        const found = incomeStats.find(i => i.mes == m);
+        return found ? found.total : 0;
+    });
+    
+    const expenseData = sortedMonths.map(m => {
+        const found = expenseStats.find(e => e.mes == m);
+        return found ? found.total : 0;
+    });
+
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Ingresos',
+                backgroundColor: '#23ad2a',
+                data: incomeData
+            },
+            {
+                label: 'Gastos',
+                backgroundColor: '#ff443d',
+                data: expenseData
+            }
+        ]
+    }
+});
+
+const optionsIngresosGastos = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'bottom' },
+        title: { display: true, text: 'Ingresos vs Gastos (Año Actual)', font: { size: 16 } }
+    }
+}
+
 //FIN DE GRAFICAS
 
 const cantClientsReg = ref(0)
@@ -351,7 +437,13 @@ onMounted(() => {
                     </div>
 
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg">
-                        
+                        <div class="border-b border-gray-200 pb-2 mb-4">
+                            <h3 class="text-center font-bold text-lg">Desglose de Gastos</h3>
+                        </div>
+                         <div class="flex flex-col items-center h-64">
+                            <DoughnutChart v-if="financeStats" :chart-data="chartGastosCategoria" :chart-options="optionsGastosCategoria" class="h-full w-full"/>
+                            <div v-else class="flex items-center justify-center h-full text-gray-400">Cargando...</div>
+                        </div>
                     </div>
 
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg col-span-2">
@@ -372,7 +464,13 @@ onMounted(() => {
                     </div>
 
                     <div class="p-2 bg-white rounded-lg border border-green-100 shadow-lg">
-                        
+                         <div class="border-b border-gray-200 pb-2 mb-4">
+                            <h3 class="text-center font-bold text-lg">Finanzas</h3>
+                        </div>
+                        <div class="flex flex-col items-center h-64">
+                             <BarChart v-if="financeStats" :chart-data="chartIngresosGastos" :chart-options="optionsIngresosGastos" class="h-full w-full"/>
+                             <div v-else class="flex items-center justify-center h-full text-gray-400">Cargando...</div>
+                        </div>
                     </div>
                 </div>
             </div>

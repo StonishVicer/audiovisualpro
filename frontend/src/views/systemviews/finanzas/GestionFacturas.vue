@@ -143,7 +143,6 @@
           <div class="border-t border-b border-gray-200 py-4">
             <div class="flex justify-between items-center mb-2">
               <h4 class="font-semibold text-gray-700 text-sm">Detalle de Servicios</h4>
-              <button type="button" @click="addItem" class="text-xs text-green-600 hover:underline font-bold">+ Agregar Item</button>
             </div>
             
             <div class="space-y-3">
@@ -175,10 +174,7 @@
                  <span class="text-gray-500">Subtotal:</span>
                  <span class="font-medium">${{ subtotal.toFixed(2) }}</span>
                </div>
-               <div class="flex justify-between items-center text-sm mb-2">
-                 <span class="text-gray-500">Impuesto (%):</span>
-                 <input v-model.number="form.impuesto_porcentaje" class="w-12 text-right border border-gray-300 rounded px-1 text-xs" type="number" />
-               </div>
+
                <div class="flex justify-between text-xl font-bold text-green-700 border-t border-gray-200 pt-2">
                  <span>Total a Pagar:</span>
                  <span>${{ total.toFixed(2) }}</span>
@@ -223,9 +219,8 @@ const form = ref({
   numero_factura: '',
   fecha_factura: new Date().toISOString().slice(0,10),
   cliente_id: '',
-  contrato_id: null,
+  id_contrato: null,
   items: [emptyItem()],
-  impuesto_porcentaje: 16,
   estado: 'PENDIENTE',
   notas: '',
 })
@@ -233,8 +228,7 @@ const form = ref({
 // --- Computadas ---
 const subtotal = computed(() => form.value.items.reduce((acc, it) => acc + (Number(it.cantidad||1) * Number(it.precio_unitario||0)), 0))
 const total = computed(() => {
-  const imp = Number(form.value.impuesto_porcentaje || 0)
-  return subtotal.value + (subtotal.value * imp / 100)
+  return subtotal.value
 })
 
 const filtered = computed(() => {
@@ -271,7 +265,7 @@ const onContratoChange = () => {
    if (!contrato) return
 
    form.value.cliente_id = contrato.id_cliente
-   form.value.contrato_id = contrato.id_contrato
+   form.value.id_contrato = contrato.id_contrato
    
    // Pre-llenar item con datos del contrato
    form.value.items = [{
@@ -287,6 +281,20 @@ const onContratoChange = () => {
 // --- Funciones del Form ---
 const openNew = () => {
   resetForm()
+  
+  // Auto-incremento
+  if (facturas.value.length > 0) {
+      const numbers = facturas.value.map(f => {
+          // Extraer solo dígitos
+          const match = String(f.numero_factura).match(/(\d+)/);
+          return match ? parseInt(match[1] || match[0]) : 0;
+      });
+      const max = Math.max(...numbers, 0);
+      form.value.numero_factura = String(max + 1).padStart(3, '0');
+  } else {
+      form.value.numero_factura = '001';
+  }
+
   isEditing.value = false
   showModal.value = true
 }
@@ -294,14 +302,14 @@ const openNew = () => {
 const openEdit = (fact) => {
     isEditing.value = true
     editingId.value = fact.id_factura
-    selectedContratoId.value = fact.contrato_id 
+    selectedContratoId.value = fact.id_contrato 
 
     form.value = {
         numero_factura: fact.numero_factura,
         fecha_factura: fact.fecha_factura ? fact.fecha_factura.split('T')[0] : '',
         cliente_id: fact.cliente_id,
-        contrato_id: fact.contrato_id,
-        impuesto_porcentaje: Number(fact.impuesto_porcentaje),
+        id_contrato: fact.id_contrato,
+
         estado: fact.estado,
         notas: fact.notas,
         items: fact.items?.map(it => ({
@@ -320,9 +328,8 @@ const resetForm = () => {
     numero_factura: '',
     fecha_factura: new Date().toISOString().slice(0,10),
     cliente_id: '',
-    contrato_id: null,
+    id_contrato: null,
     items: [emptyItem()],
-    impuesto_porcentaje: 16,
     estado: 'PENDIENTE',
     notas: ''
   }
@@ -354,7 +361,7 @@ const saveFactura = async () => {
          if (index !== -1) {
              const updated = res.data.factura; 
              // Mantenemos los nombres visibles
-             const contratoInfo = contratos.value.find(c => c.id_contrato === updated.contrato_id)
+             const contratoInfo = contratos.value.find(c => c.id_contrato === updated.id_contrato)
              updated.nombre_cliente = contratoInfo ? contratoInfo.nombre_cliente : '...'
              updated.nombre_proyecto = contratoInfo ? contratoInfo.nombre_proyecto : '...'
              updated._showDetail = false
@@ -367,7 +374,7 @@ const saveFactura = async () => {
          const nuevaFactura = res.data
          
          // INYECCIÓN DE NOMBRES (Esto hace que se visualice guardada al instante)
-         const contratoInfo = contratos.value.find(c => c.id_contrato === nuevaFactura.contrato_id)
+         const contratoInfo = contratos.value.find(c => c.id_contrato === nuevaFactura.id_contrato)
          
          if (contratoInfo) {
              nuevaFactura.nombre_cliente = contratoInfo.nombre_cliente

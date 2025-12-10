@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
-import { Server } from 'socket.io'; 
+import { Server } from 'socket.io';
 
 import authRoutes from './routes/auth.routes.js';
 import clienteRoutes from './routes/cliente.routes.js';
@@ -23,6 +23,7 @@ import contratosRoutes from './routes/contratos.routes.js';
 import pagosRoutes from './routes/pagos.routes.js';
 import facturasRoutes from './routes/facturas.routes.js';
 import gastosRoutes from './routes/gasto.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 import entregablesRoutes from './routes/entregables.routes.js';
 import estadosEntregableRoutes from './routes/estadosEntregable.routes.js';
 
@@ -32,14 +33,14 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const httpServer = http.createServer(app); 
+const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
     cors: {
-        origin: "http://localhost:5173", 
+        origin: "http://localhost:5173",
         methods: ["GET", "POST"]
     }
-}); 
+});
 
 app.use(cors());
 app.use(express.json());
@@ -59,6 +60,7 @@ app.use('/api/contratos', contratosRoutes)
 app.use('/api/pagos_personal', pagosRoutes)
 app.use('/api/facturas', facturasRoutes)
 app.use('/api/gastos', gastosRoutes);
+app.use('/api/stats', statsRoutes);
 app.use('/api/entregables', entregablesRoutes)
 app.use('/api/estadosentregable', estadosEntregableRoutes)
 
@@ -71,13 +73,13 @@ io.on('connection', (socket) => {
 
     socket.on('register', (userId) => {
         users[userId] = socket.id;
-        socket.userId = userId; 
+        socket.userId = userId;
         console.log(`✅ Usuario ${userId} registrado.`);
     });
 
     socket.on('private_message', ({ receiverId, message }) => {
         const receiverSocketId = users[receiverId];
-        
+
         if (receiverSocketId) {
             io.to(receiverSocketId).emit('private_message', {
                 senderId: socket.userId,
@@ -85,7 +87,7 @@ io.on('connection', (socket) => {
             });
 
             socket.emit('message_sent', { message: message });
-            
+
             console.log(`💬 Mensaje de ${socket.userId} a ${receiverId}`);
         } else {
             console.log(`❌ Error: Destinatario ${receiverId} no encontrado.`);

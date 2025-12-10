@@ -10,7 +10,7 @@ export const getFacturas = async (req, res) => {
                    p.nombre_proyecto
             FROM facturas f
             LEFT JOIN clientes c ON f.cliente_id = c.id_cliente
-            LEFT JOIN contratos cont ON f.contrato_id = cont.id_contrato
+            LEFT JOIN contratos cont ON f.id_contrato = cont.id_contrato
             LEFT JOIN proyectos p ON cont.id_proyecto = p.id_proyecto
             ORDER BY f.fecha_factura DESC
         `;
@@ -23,6 +23,7 @@ export const getFacturas = async (req, res) => {
             fact.items = itemsRes.rows;
         }
 
+
         res.json(facturas);
     } catch (err) {
         console.error(err);
@@ -33,14 +34,13 @@ export const getFacturas = async (req, res) => {
 // CREATE (Blindado)
 export const createFactura = async (req, res) => {
     const client = await pool.connect();
-    
+
     try {
-        const { numero_factura, fecha_factura, cliente_id, contrato_id, items, impuesto_porcentaje, subtotal, total, estado, notas } = req.body;
+        const { numero_factura, fecha_factura, cliente_id, contrato_id, items, subtotal, total, estado, notas } = req.body;
 
         // BLINDAJE DE TIPOS (Evita errores de sintaxis SQL)
         const clienteIdFinal = parseInt(cliente_id);
         const contratoIdFinal = (contrato_id) ? parseInt(contrato_id) : null;
-        const impFinal = parseFloat(impuesto_porcentaje) || 0;
         const subtotalFinal = parseFloat(subtotal) || 0;
         const totalFinal = parseFloat(total) || 0;
 
@@ -49,10 +49,10 @@ export const createFactura = async (req, res) => {
         // Insertar Factura
         const resFact = await client.query(`
             INSERT INTO facturas 
-            (numero_factura, fecha_factura, cliente_id, contrato_id, impuesto_porcentaje, subtotal, total, estado, notas)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            (numero_factura, fecha_factura, cliente_id, id_contrato, subtotal, total, estado, notas)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
-        `, [numero_factura, fecha_factura, clienteIdFinal, contratoIdFinal, impFinal, subtotalFinal, totalFinal, estado, notas]);
+        `, [numero_factura, fecha_factura, clienteIdFinal, contratoIdFinal, subtotalFinal, totalFinal, estado, notas]);
 
         const newFactura = resFact.rows[0];
 
@@ -67,7 +67,7 @@ export const createFactura = async (req, res) => {
         }
 
         await client.query('COMMIT');
-        
+
         // Devolvemos la factura creada + los items para el front
         res.status(201).json({ ...newFactura, items });
 
@@ -85,12 +85,11 @@ export const updateFactura = async (req, res) => {
     const client = await pool.connect();
     try {
         const { id } = req.params;
-        const { numero_factura, fecha_factura, cliente_id, contrato_id, items, impuesto_porcentaje, subtotal, total, estado, notas } = req.body;
+        const { numero_factura, fecha_factura, cliente_id, contrato_id, items, subtotal, total, estado, notas } = req.body;
 
         // BLINDAJE DE TIPOS
         const clienteIdFinal = parseInt(cliente_id);
         const contratoIdFinal = (contrato_id) ? parseInt(contrato_id) : null;
-        const impFinal = parseFloat(impuesto_porcentaje) || 0;
         const subtotalFinal = parseFloat(subtotal) || 0;
         const totalFinal = parseFloat(total) || 0;
 
@@ -101,15 +100,14 @@ export const updateFactura = async (req, res) => {
                 numero_factura = $1, 
                 fecha_factura = $2, 
                 cliente_id = $3, 
-                contrato_id = $4,
-                impuesto_porcentaje = $5, 
-                subtotal = $6, 
-                total = $7, 
-                estado = $8, 
-                notas = $9
-            WHERE id_factura = $10
+                id_contrato = $4,
+                subtotal = $5, 
+                total = $6, 
+                estado = $7, 
+                notas = $8
+            WHERE id_factura = $9
             RETURNING *
-        `, [numero_factura, fecha_factura, clienteIdFinal, contratoIdFinal, impFinal, subtotalFinal, totalFinal, estado, notas, id]);
+        `, [numero_factura, fecha_factura, clienteIdFinal, contratoIdFinal, subtotalFinal, totalFinal, estado, notas, id]);
 
         if (result.rows.length === 0) {
             await client.query('ROLLBACK');

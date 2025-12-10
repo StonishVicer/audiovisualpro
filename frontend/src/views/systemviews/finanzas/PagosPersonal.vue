@@ -9,13 +9,11 @@ import Confirmation from '../../../components/Confirmation.vue'
 // --- ESTADO ---
 const pagos = ref([])
 const personal = ref([]) 
-// CAMBIO: Lista estática de categorías (Strings directos)
-const categorias = ref(['Sueldo', 'Pagos Extra', 'Bonificación'])
 
 // --- FORMULARIO ---
 const form = ref({
     id_personal: '',
-    categoria_pg: '', // CAMBIO: Ahora guarda el string directo
+    // Se eliminó categoria_pg
     monto_pagado: '',
     fecha_pago: new Date().toISOString().slice(0,10),
     motivo_pago: ''
@@ -46,7 +44,6 @@ const displayToast = (message, type) => {
 const limpiarCampos = () => {
     form.value = {
         id_personal: '',
-        categoria_pg: '',
         monto_pagado: '',
         fecha_pago: new Date().toISOString().slice(0,10),
         motivo_pago: ''
@@ -67,7 +64,6 @@ const filteredPagos = computed(() => {
     if (!q) return pagos.value
     return pagos.value.filter(p => 
         (p.nombre_personal || '').toLowerCase().includes(q) ||
-        (p.categoria_pg || '').toLowerCase().includes(q) || // Busca también por categoría
         (p.motivo_pago || '').toLowerCase().includes(q)
     )
 })
@@ -100,7 +96,8 @@ const getPagos = async () => {
 
 // 3. Crear Pago
 const createPago = async () => {
-    if (!form.value.id_personal || !form.value.categoria_pg || !form.value.monto_pagado || !form.value.fecha_pago) {
+    // Se eliminó la validación de form.value.categoria_pg
+    if (!form.value.id_personal || !form.value.monto_pagado || !form.value.fecha_pago) {
         error.value = true
         return
     }
@@ -109,10 +106,8 @@ const createPago = async () => {
     error.value = false
 
     try {
-        // CAMBIO: Enviamos el payload limpio
         const payload = {
             id_personal: Number(form.value.id_personal),
-            categoria_pg: form.value.categoria_pg, // String directo
             monto_pagado: Number(form.value.monto_pagado),
             fecha_pago: form.value.fecha_pago,
             motivo_pago: form.value.motivo_pago
@@ -123,12 +118,8 @@ const createPago = async () => {
         // --- ACTUALIZACIÓN UI ---
         const nuevoPago = res.data
         
-        // Solo necesitamos buscar el nombre del personal
         const personalEncontrado = personal.value.find(p => p.id_personal == nuevoPago.id_personal)
         nuevoPago.nombre_personal = personalEncontrado ? personalEncontrado.nombre_personal : '...'
-        
-        // La categoría ya viene lista en el objeto porque la enviamos como string
-        // (El backend devuelve lo que insertó)
         
         pagos.value.unshift(nuevoPago) 
         
@@ -200,7 +191,7 @@ onMounted(() => {
                     <input
                         v-model="searchQuery"
                         type="text"
-                        class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Buscar por personal, categoría o motivo..."
+                        class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Buscar por personal o motivo..."
                     >
                 </div>
             </div>
@@ -221,7 +212,6 @@ onMounted(() => {
                     <thead>
                         <tr class="bg-green-100 text-green-900">
                             <th class="px-4 py-2 text-left">Personal</th>
-                            <th class="px-4 py-2 text-left">Categoría</th>
                             <th class="px-4 py-2 text-left">Monto ($)</th>
                             <th class="px-4 py-2 text-left">Fecha</th>
                             <th class="px-4 py-2 text-left">Motivo</th>
@@ -232,12 +222,6 @@ onMounted(() => {
                         <tr v-for="pago in filteredPagos" :key="pago.id_pago" class="border-b border-green-100 hover:bg-green-50 transition">
                             <td class="px-4 py-2 font-medium">{{ pago.nombre_personal || pago.personal?.nombre_personal || '—' }}</td>
                             
-                            <td class="px-4 py-2">
-                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-semibold">
-                                    {{ pago.categoria_pg }}
-                                </span>
-                            </td>
-
                             <td class="px-4 py-2 font-bold text-green-700">${{ Number(pago.monto_pagado).toFixed(2) }}</td>
                             <td class="px-4 py-2 text-gray-600">{{ formatDate(pago.fecha_pago) }}</td>
                             <td class="px-4 py-2 text-gray-500 italic text-sm truncate max-w-xs">{{ pago.motivo_pago || '—' }}</td>
@@ -289,27 +273,15 @@ onMounted(() => {
                             </select>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="flex flex-col">
-                                <label class="text-sm font-semibold text-gray-500 mb-1">Categoría</label>
-                                <select v-model="form.categoria_pg" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
-                                    <option value="" disabled>-- Seleccionar --</option>
-                                    <option v-for="cat in categorias" :key="cat" :value="cat">
-                                        {{ cat }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div class="flex flex-col">
-                                <label class="text-sm font-semibold text-gray-500 mb-1">Monto ($)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    v-model="form.monto_pagado"
-                                    class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-                                    placeholder="0.00"
-                                >
-                            </div>
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Monto ($)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                v-model="form.monto_pagado"
+                                class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                placeholder="0.00"
+                            >
                         </div>
 
                         <div class="flex flex-col">
