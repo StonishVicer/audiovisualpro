@@ -77,48 +77,6 @@ const cargarListasDesplegables = async () => {
     }
 }
 
-const createContrato = async () => {
-    if (!id_proyecto_seleccionado.value || !id_cliente_seleccionado.value || !fecha_firma.value || !monto_contrato.value || !descripcion_servicios.value) {
-        error.value = true
-        return
-    }
-    
-    isConnecting.value = true
-    error.value = false
-
-    try {
-        const payload = {
-            id_proyecto: id_proyecto_seleccionado.value,
-            id_cliente: id_cliente_seleccionado.value,
-            fecha_firma: fecha_firma.value,
-            monto_contrato: monto_contrato.value,
-            descripcion_servicios: descripcion_servicios.value
-        }
-
-        const res = await api.post('/api/contratos', payload)
-
-        const clienteNom = clientes.value.find(c => c.id_cliente === payload.id_cliente)?.nombre_cliente
-        const proyectoNom = proyectos.value.find(p => p.id_proyecto === payload.id_proyecto)?.nombre_proyecto
-
-        contratos.value.push({
-            ...res.data,
-            ...payload,
-            nombre_cliente: clienteNom,
-            nombre_proyecto: proyectoNom
-        })
-
-        displayToast('Contrato registrado exitosamente', 'success')
-        showModal.value = false
-        limpiarCampos()
-
-    } catch (err) {
-        console.error(err)
-        displayToast('Error al guardar el contrato', 'error')
-    } finally {
-        isConnecting.value = false
-    }
-}
-
 onMounted(() => {
     getContratos()
     cargarListasDesplegables()
@@ -129,16 +87,6 @@ onMounted(() => {
     <div class="h-screen flex flex-col">
         <div class="border-b border-gray-200 pb-3 mb-4">
             <h3 class="text-center font-bold text-lg text-gray-700">Gestión de Contratos</h3>
-        </div>
-
-        <div class="mb-3">
-            <div class="flex justify-end">
-                <button @click="showModal = true" 
-                    class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors shadow-sm">
-                    <Icon icon="mdi:file-sign" width="25" height="25" class="mr-2" />
-                    Nuevo Contrato
-                </button>
-            </div>
         </div>
 
         <div class="mb-3">

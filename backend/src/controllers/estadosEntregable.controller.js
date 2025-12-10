@@ -16,7 +16,6 @@ export const createEstado = async (req, res) => {
         if (!nombre_estado || !nombre_estado.toString().trim()) {
             return res.status(400).json({ message: 'El nombre del estado es obligatorio' })
         }
-        // Intentamos insertar con las 3 columnas; si la tabla no las tiene, hacemos fallback
         try {
             const result = await pool.query(
                 'INSERT INTO estados_entregable (nombre_estado, descripcion_estado, color_estado) VALUES ($1, $2, $3) RETURNING *',
@@ -25,7 +24,6 @@ export const createEstado = async (req, res) => {
             return res.status(201).json(result.rows[0])
         } catch (innerErr) {
             console.warn('Insert con 3 columnas falló, intentando solo nombre_estado:', innerErr.message)
-            // si el error es por columna inexistente o cualquier otro, intentar solo con nombre_estado
             const result = await pool.query(
                 'INSERT INTO estados_entregable (nombre_estado) VALUES ($1) RETURNING *',
                 [nombre_estado]
@@ -42,7 +40,6 @@ export const updateEstado = async (req, res) => {
     const { id } = req.params
     const { nombre_estado, descripcion_estado, color_estado } = req.body
     try {
-        // Intentar actualizar con las 3 columnas; si falla (p.ej. columnas no existen), actualizar solo nombre_estado
         try {
             const result = await pool.query(
                 'UPDATE estados_entregable SET nombre_estado = $1, descripcion_estado = $2, color_estado = $3 WHERE id_estado_entregable = $4 RETURNING *',

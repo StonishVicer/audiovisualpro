@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil y Ética del Informático</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .hero-pattern {
+            background-color: #1e3a8a;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233b82f6' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #1e40af, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Navegación -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <i data-lucide="cpu" class="h-8 w-8 text-blue-800"></i>
+                    <span class="ml-2 text-xl font-bold text-slate-900 tracking-tight">InfoÉtica</span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#habilidades" class="text-slate-600 hover:text-blue-700 font-medium transition">Habilidades</a>
+                    <a href="#valores" class="text-slate-600 hover:text-blue-700 font-medium transition">Valores</a>
+                    <a href="#desafios" class="text-slate-600 hover:text-blue-700 font-medium transition">Desafíos Éticos</a>
+                    <a href="#entrevista" class="px-4 py-2 rounded-md bg-blue-700 text-white font-medium hover:bg-blue-800 transition shadow-sm">Entrevista</a>
+                </div>
+                <!-- Menú móvil botón -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-slate-600 hover:text-blue-700 focus:outline-none">
+                        <i data-lucide="menu" class="h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t p-4 space-y-2">
+            <a href="#habilidades" class="block text-slate-600 hover:text-blue-700">Habilidades</a>
+            <a href="#valores" class="block text-slate-600 hover:text-blue-700">Valores</a>
+            <a href="#desafios" class="block text-slate-600 hover:text-blue-700">Desafíos</a>
+            <a href="#entrevista" class="block text-blue-700 font-bold">Entrevista</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-pattern text-white py-24 md:py-32">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 tracking-tight">El Perfil Integral del Informático</h1>
+            <p class="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-10 font-light">
+                Más allá del código: Habilidades, valores y ética en la era digital.
+            </p>
+            <div class="flex justify-center gap-4">
+                <a href="#entrevista" class="px-8 py-3 bg-white text-blue-900 font-bold rounded-full shadow-lg hover:bg-blue-50 transition transform hover:-translate-y-1">
+                    Leer Entrevista Real
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECCIÓN 1: HABILIDADES Y DESTREZAS -->
+    <section id="habilidades" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-600 font-bold tracking-wider uppercase text-sm">Competencias Clave</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mt-2">Habilidades del Informático</h2>
+                <div class="w-20 h-1 bg-blue-600 mx-auto mt-4 rounded"></div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Habilidad 1 -->
+                <div class="group p-8 border border-slate-100 rounded-2xl bg-slate-50 hover:bg-white hover:shadow-xl transition duration-300 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-6 group-hover:scale-110 transition">
+                        <i data-lucide="brain-circuit" class="h-8 w-8"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Pensamiento Lógico y Analítico</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Capacidad para descomponer problemas complejos en partes manejables, diseñando algoritmos eficientes y soluciones estructuradas.
+                    </p>
+                </div>
+
+                <!-- Habilidad 2 -->
+                <div class="group p-8 border border-slate-100 rounded-2xl bg-slate-50 hover:bg-white hover:shadow-xl transition duration-300 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-6 group-hover:scale-110 transition">
+                        <i data-lucide="book-open" class="h-8 w-8"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Autodidacta y Adaptable</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        La tecnología evoluciona rápido. Un informático debe tener la disciplina para aprender nuevos lenguajes y herramientas constantemente.
+                    </p>
+                </div>
+
+                <!-- Habilidad 3 -->
+                <div class="group p-8 border border-slate-100 rounded-2xl bg-slate-50 hover:bg-white hover:shadow-xl transition duration-300 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-6 group-hover:scale-110 transition">
+                        <i data-lucide="users" class="h-8 w-8"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Trabajo en Equipo</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        El desarrollo de software rara vez es solitario. Requiere comunicación efectiva, uso de metodologías ágiles y colaboración interdisciplinaria.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 2: VALORES -->
+    <section id="valores" class="py-20 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-12 text-center">Valores Fundamentales</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="flex items-start p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-blue-500">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="lock" class="h-10 w-10 text-blue-600"></i>
+                    </div>
+                    <div class="ml-5">
+                        <h3 class="text-lg font-bold text-slate-900">Confidencialidad</h3>
+                        <p class="mt-2 text-slate-600">Protección rigurosa de los datos sensibles y la información privada a la que se tiene acceso.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-blue-500">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="award" class="h-10 w-10 text-blue-600"></i>
+                    </div>
+                    <div class="ml-5">
+                        <h3 class="text-lg font-bold text-slate-900">Honestidad Intelectual</h3>
+                        <p class="mt-2 text-slate-600">Reconocer la autoría del código, respetar licencias y no atribuirse trabajo ajeno.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-blue-500">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="shield-check" class="h-10 w-10 text-blue-600"></i>
+                    </div>
+                    <div class="ml-5">
+                        <h3 class="text-lg font-bold text-slate-900">Responsabilidad Social</h3>
+                        <p class="mt-2 text-slate-600">Considerar el impacto que el software desarrollado tendrá en la sociedad y el medio ambiente.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-blue-500">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="eye" class="h-10 w-10 text-blue-600"></i>
+                    </div>
+                    <div class="ml-5">
+                        <h3 class="text-lg font-bold text-slate-900">Transparencia</h3>
+                        <p class="mt-2 text-slate-600">Ser claro sobre las limitaciones, fallos y riesgos de seguridad de los sistemas que se crean.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 3: DESAFÍOS ÉTICOS (Profesional vs Estudiante) -->
+    <section id="desafios" class="py-20 bg-blue-900 text-white relative overflow-hidden">
+        <!-- Decoración fondo -->
+        <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 30px 30px;"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">Desafíos Éticos en la Informática</h2>
+
+            <div class="grid md:grid-cols-2 gap-12">
+                <!-- Columna Profesional -->
+                <div class="bg-blue-800 bg-opacity-50 p-8 rounded-2xl border border-blue-700 backdrop-blur-sm">
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-blue-600 rounded-lg mr-4">
+                            <i data-lucide="briefcase" class="h-6 w-6 text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold">Como Profesional</h3>
+                    </div>
+                    <ul class="space-y-4 text-blue-100">
+                        <li class="flex items-start">
+                            <i data-lucide="alert-circle" class="h-5 w-5 mr-3 mt-1 text-blue-400"></i>
+                            <span><strong>Privacidad de Datos:</strong> El dilema entre monetizar datos de usuarios y proteger su intimidad.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="alert-circle" class="h-5 w-5 mr-3 mt-1 text-blue-400"></i>
+                            <span><strong>Sesgo Algorítmico:</strong> Evitar crear IA que discrimine por raza o género debido a datos sesgados.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="alert-circle" class="h-5 w-5 mr-3 mt-1 text-blue-400"></i>
+                            <span><strong>Seguridad vs. Prisa:</strong> La presión por lanzar productos rápido sacrificando pruebas de seguridad.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Columna Estudiante -->
+                <div class="bg-white text-slate-800 p-8 rounded-2xl shadow-xl">
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-blue-100 rounded-lg mr-4">
+                            <i data-lucide="graduation-cap" class="h-6 w-6 text-blue-600"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-blue-900">Como Estudiante</h3>
+                    </div>
+                    <ul class="space-y-4 text-slate-600">
+                        <li class="flex items-start">
+                            <i data-lucide="alert-triangle" class="h-5 w-5 mr-3 mt-1 text-amber-500"></i>
+                            <span><strong>Plagio de Código:</strong> Copiar soluciones de internet o compañeros sin entender la lógica (Copy-Paste).</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="alert-triangle" class="h-5 w-5 mr-3 mt-1 text-amber-500"></i>
+                            <span><strong>Colaboración Indebida:</strong> Cruzar la línea entre estudiar en grupo y presentar el trabajo de otro como propio.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="alert-triangle" class="h-5 w-5 mr-3 mt-1 text-amber-500"></i>
+                            <span><strong>Uso de IA:</strong> Usar herramientas como ChatGPT para resolver exámenes o tareas en lugar de como apoyo al aprendizaje.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 4: LA ENTREVISTA -->
+    <section id="entrevista" class="py-24 bg-slate-50">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-center mb-10 space-x-3 text-blue-900">
+                <i data-lucide="mic-2" class="h-8 w-8"></i>
+                <h2 class="text-3xl font-bold tracking-tight">Perspectiva Real</h2>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                <!-- Header Entrevista -->
+                <div class="bg-blue-900 p-8 text-white">
+                    <h3 class="text-2xl font-bold mb-2">Entrevista a Programador Freelance</h3>
+                    <div class="flex flex-col md:flex-row justify-between text-blue-200 text-sm">
+                        <p><span class="font-semibold text-white">Entrevistado:</span> Ing. Andrea Arismendi</p>
+                        <p class="mt-2 md:mt-0"><span class="font-semibold text-white">Equipo:</span> Jose D. Colmenarez, Sara Ramos, Hannemahn Agüero, Michell Alvarado</p>
+                    </div>
+                </div>
+
+                <!-- Contenido Entrevista -->
+                <div class="p-8 md:p-12 space-y-8">
+                    
+                    <!-- Pregunta 1 -->
+                    <div class="relative pl-6 border-l-4 border-blue-500">
+                        <p class="font-bold text-blue-900 text-lg mb-2">¿Cuál es el rol que desarrolla en la empresa?</p>
+                        <p class="text-slate-600 italic">"Freelancer, Programador, y administradora de base de datos."</p>
+                    </div>
+
+                    <!-- Pregunta 2 -->
+                    <div class="relative pl-6 border-l-4 border-blue-500">
+                        <p class="font-bold text-blue-900 text-lg mb-2">¿Cuál ha sido el mayor reto al trabajar como freelancer?</p>
+                        <p class="text-slate-600 italic">"Tener que administrar el tiempo y tener cuidado con mi espacio de trabajo."</p>
+                    </div>
+
+                    <!-- Pregunta 3 -->
+                    <div class="relative pl-6 border-l-4 border-blue-500">
+                        <p class="font-bold text-blue-900 text-lg mb-2">¿A qué desafío ético te enfrentaste cuando trabajaste en esta empresa?</p>
+                        <p class="text-slate-600 italic">
+                            "Cuando terminé de trabajar en la empresa fue complicado porque me botaron sin explicación ni nada, solamente me dijeron que no iba a seguir formando parte del equipo y tuve que aceptar que esas son las dificultades de trabajar como freelancer."
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex items-center justify-center text-white mb-4">
+                <i data-lucide="shield" class="h-6 w-6 text-blue-500"></i>
+                <span class="ml-2 text-xl font-bold">InfoÉtica</span>
+            </div>
+            <p class="text-sm mb-6">Promoviendo la excelencia y la integridad en la ingeniería informática.</p>
+            <div class="text-xs text-slate-600">
+                &copy; 2025. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>

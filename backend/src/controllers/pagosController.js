@@ -56,12 +56,10 @@ export const createPago = async (req, res) => {
             motivo_pago 
         } = req.body
 
-        // Se quitó categoria_pg de la validación
         if (!id_personal || !monto_pagado || !fecha_pago) {
             return res.status(400).json({ message: 'Faltan campos obligatorios' })
         }
 
-        // Se eliminó categoria_pg del INSERT y los values
         const query = `
             INSERT INTO pagos_personal 
             (id_personal, monto_pagado, fecha_pago, motivo_pago) 
@@ -83,13 +81,11 @@ export const updatePago = async (req, res) => {
         const { id } = req.params
         const { 
             id_personal, 
-            // categoria_pg, // ELIMINADO
             monto_pagado, 
             fecha_pago, 
             motivo_pago 
         } = req.body
 
-        // Se eliminó categoria_pg del UPDATE
         const query = `
             UPDATE pagos_personal 
             SET id_personal = $1, 
@@ -99,7 +95,6 @@ export const updatePago = async (req, res) => {
             WHERE id_pago = $5
             RETURNING *
         `
-        // Se reordenaron los índices ($1, $2, etc.)
         const values = [id_personal, monto_pagado, fecha_pago, motivo_pago, id]
         
         const { rows } = await pool.query(query, values)

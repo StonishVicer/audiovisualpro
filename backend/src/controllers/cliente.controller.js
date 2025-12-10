@@ -75,7 +75,7 @@ export const updateCliente = async (req, res) => {
             return res.status(409).json({ message: 'No se puede editar al cliente, esta vinculado con un contrato.' })
         }
 
-        const result = await pool.queyr(
+        const result = await pool.query(
             'UPDATE clientes SET rif_cliente = $1, nombre_cliente = $2, email_cliente = $3, telefono_cliente = $4 WHERE id_cliente = $5 RETURNING *',
             [rif_cliente, nombre_cliente, email_cliente, telefono_cliente, id]
         )

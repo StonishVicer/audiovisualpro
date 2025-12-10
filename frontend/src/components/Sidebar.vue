@@ -136,7 +136,7 @@ const logout = () => {
 
                         <div
                             v-if="menu.submenu && hoverMenu === menu.name"
-                            class="absolute left-full top-0 ml-2 w-60 bg-white border border-green-100 rounded-lg shadow-lg p-2 z-50"
+                            class="absolute left-full top-0 w-60 bg-white border border-green-100 rounded-lg shadow-lg p-2 z-50"
                         >
                             <template v-for="sub in menu.submenu" :key="sub.name">
                                 <RouterLink
@@ -151,10 +151,6 @@ const logout = () => {
                     </div>
                 </template>
                 <div class="border-t border-gray-200">
-                    <RouterLink to="/system/configuracion" class="cursor-pointer mt-2 flex items-center font-semibold p-2 rounded-lg hover:bg-gray-500 hover:text-white transition">
-                        <Icon icon="icon-park-solid:config" width="25" height="25" class="mr-2" />
-                        <span v-if="isOpen">Configuracion</span>
-                    </RouterLink>
                     <button
                         @click="logout"
                         :class="[
