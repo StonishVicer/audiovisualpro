@@ -55,24 +55,22 @@
                 <td class="px-6 py-4 font-medium text-gray-900">#{{ fact.numero_factura }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ formatDate(fact.fecha_factura) }}</td>
                 <td class="px-6 py-4">
-                   <div class="font-bold text-gray-800">{{ fact.nombre_cliente }}</div>
-                   <div class="text-xs text-gray-500 flex items-center gap-1">
-                     <Icon icon="mdi:file-document-outline" /> 
-                     {{ fact.nombre_proyecto || 'Sin proyecto asignado' }}
-                   </div>
+                    <div class="font-bold text-gray-800">{{ fact.nombre_cliente || '...' }}</div>
+                    <div class="text-xs text-gray-500 flex items-center gap-1">
+                      <Icon icon="mdi:file-document-outline" /> 
+                      {{ fact.nombre_proyecto || 'Sin proyecto asignado' }}
+                    </div>
                 </td>
                 <td class="px-6 py-4 text-right font-bold text-green-700">${{ Number(fact.total).toFixed(2) }}</td>
                 <td class="px-6 py-4 text-center">
                   <span :class="{
                     'bg-yellow-100 text-yellow-800': fact.estado === 'PENDIENTE',
-                    'bg-green-100 text-green-800': fact.estado === 'PAGADA',
-                    'bg-red-100 text-red-800': fact.estado === 'CANCELADA'
+                    'bg-green-100 text-green-800': fact.estado === 'PAGADA'
                   }" class="px-2 py-1 rounded-full text-xs font-semibold">
                     {{ fact.estado }}
                   </span>
                 </td>
                 <td class="px-6 py-4 flex justify-center gap-2">
-                   <!-- Botón Editar Agregado -->
                    <button @click.stop="openEdit(fact)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Editar">
                      <Icon icon="material-symbols:edit" width="20" />
                    </button>
@@ -122,9 +120,6 @@
                    Cliente: {{ c.nombre_cliente }} — Proy: {{ c.nombre_proyecto }} (${{ c.monto_contrato }})
                 </option>
              </select>
-             <p class="text-xs text-blue-600 mt-2 ml-1" v-if="selectedContratoId">
-                * El cliente se asignará automáticamente.
-             </p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -139,9 +134,8 @@
              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                 <select v-model="form.estado" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none">
-                  <option>PENDIENTE</option>
-                  <option>PAGADA</option>
-                  <option>CANCELADA</option>
+                  <option value="PENDIENTE">PENDIENTE</option>
+                  <option value="PAGADA">PAGADA</option>
                 </select>
              </div>
           </div>
@@ -149,21 +143,15 @@
           <div class="border-t border-b border-gray-200 py-4">
             <div class="flex justify-between items-center mb-2">
               <h4 class="font-semibold text-gray-700 text-sm">Detalle de Servicios</h4>
-              <button type="button" @click="addItem" class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center bg-blue-50 px-2 py-1 rounded transition">
-                <Icon icon="mdi:plus" class="mr-1"/> Agregar Item Extra
-              </button>
+              <button type="button" @click="addItem" class="text-xs text-green-600 hover:underline font-bold">+ Agregar Item</button>
             </div>
             
             <div class="space-y-3">
               <div v-for="(it, idx) in form.items" :key="it.tmpId" class="flex gap-2 items-start bg-gray-50 p-3 rounded-lg border border-gray-200">
                  <div class="flex-1 grid grid-cols-12 gap-3">
-                   <div class="col-span-6">
+                   <div class="col-span-8">
                      <label class="text-[10px] text-gray-500 uppercase font-bold">Descripción</label>
                      <input v-model="it.descripcion" class="w-full text-sm bg-white border border-gray-300 rounded px-2 py-1 focus:border-green-500 outline-none" />
-                   </div>
-                   <div class="col-span-2">
-                     <label class="text-[10px] text-gray-500 uppercase font-bold text-center block">Cant.</label>
-                     <input v-model.number="it.cantidad" type="number" class="w-full text-sm bg-white border border-gray-300 rounded px-2 py-1 text-center outline-none" />
                    </div>
                    <div class="col-span-2">
                      <label class="text-[10px] text-gray-500 uppercase font-bold text-right block">Precio</label>
@@ -172,7 +160,7 @@
                    <div class="col-span-2 text-right">
                      <label class="text-[10px] text-gray-500 uppercase font-bold block">Subtotal</label>
                      <div class="font-bold text-gray-700 text-sm py-1">
-                       ${{ (Number(it.cantidad) * Number(it.precio_unitario)).toFixed(2) }}
+                        ${{ (Number(it.cantidad || 1) * Number(it.precio_unitario)).toFixed(2) }}
                      </div>
                    </div>
                  </div>
@@ -180,7 +168,7 @@
               </div>
             </div>
           </div>
-
+          
           <div class="flex justify-end">
             <div class="w-full md:w-1/2 bg-gray-50 p-4 rounded-xl">
                <div class="flex justify-between text-sm mb-1">
@@ -201,13 +189,13 @@
           <div class="flex gap-3 pt-2">
             <button type="button" @click="closeModal" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition font-medium">Cancelar</button>
             <button type="submit" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-bold shadow-md transition">
-                {{ isEditing ? 'Guardar Cambios' : 'Crear Factura' }}
+               <Icon v-if="isLoading" icon="eos-icons:loading" class="animate-spin mr-2" />
+               {{ isEditing ? 'Guardar Cambios' : 'Crear Factura' }}
             </button>
           </div>
         </form>
       </div>
     </Modal>
-    <Toast v-model="isLoading" message="Procesando..." type="loading" />
   </div>
 </template>
 
@@ -215,7 +203,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import Modal from '../../../components/Modal.vue'
-import Toast from '../../../components/Toast.vue'
 import api from '../../../services/api.js'
 
 // --- Estados ---
@@ -224,8 +211,8 @@ const contratos = ref([])
 const loadingFacturas = ref(false)
 const isLoading = ref(false)
 const showModal = ref(false)
-const isEditing = ref(false) // <--- Agregado
-const editingId = ref(null) // <--- Agregado
+const isEditing = ref(false)
+const editingId = ref(null)
 const query = ref('')
 
 const selectedContratoId = ref('') 
@@ -244,7 +231,7 @@ const form = ref({
 })
 
 // --- Computadas ---
-const subtotal = computed(() => form.value.items.reduce((acc, it) => acc + (Number(it.cantidad||0) * Number(it.precio_unitario||0)), 0))
+const subtotal = computed(() => form.value.items.reduce((acc, it) => acc + (Number(it.cantidad||1) * Number(it.precio_unitario||0)), 0))
 const total = computed(() => {
   const imp = Number(form.value.impuesto_porcentaje || 0)
   return subtotal.value + (subtotal.value * imp / 100)
@@ -272,6 +259,7 @@ const getFacturas = async () => {
   loadingFacturas.value = true
   try {
     const res = await api.get('/api/facturas')
+    // Agregamos flag para el detalle desplegable
     facturas.value = res.data.map(f => ({ ...f, _showDetail: false }))
   } catch (e) { console.error(e) } 
   finally { loadingFacturas.value = false }
@@ -285,10 +273,10 @@ const onContratoChange = () => {
    form.value.cliente_id = contrato.id_cliente
    form.value.contrato_id = contrato.id_contrato
    
-   // Autocompletar Items con los datos del contrato
+   // Pre-llenar item con datos del contrato
    form.value.items = [{
       tmpId: Date.now(),
-      descripcion: `Contrato #${contrato.id_contrato} - ${contrato.nombre_proyecto}`,
+      descripcion: `Contrato: ${contrato.nombre_proyecto}`,
       cantidad: 1,
       precio_unitario: Number(contrato.monto_contrato)
    }]
@@ -306,8 +294,6 @@ const openNew = () => {
 const openEdit = (fact) => {
     isEditing.value = true
     editingId.value = fact.id_factura
-    
-    // Asignar el contrato para que el select lo muestre
     selectedContratoId.value = fact.contrato_id 
 
     form.value = {
@@ -318,7 +304,6 @@ const openEdit = (fact) => {
         impuesto_porcentaje: Number(fact.impuesto_porcentaje),
         estado: fact.estado,
         notas: fact.notas,
-        // Mapear items asegurando que tengan tmpId para el v-for
         items: fact.items?.map(it => ({
             ...it,
             tmpId: Math.random()
@@ -348,26 +333,57 @@ const removeItem = (idx) => {
     if(form.value.items.length > 1) form.value.items.splice(idx, 1)
 }
 
+// --- GUARDAR FACTURA (SOLUCIÓN CLAVE) ---
 const saveFactura = async () => {
   if (!form.value.cliente_id || !form.value.numero_factura) {
-      alert('Por favor selecciona un contrato y escribe un número de factura.')
+      alert('Seleccione un contrato válido y escriba un N° de factura.')
       return
   }
 
   isLoading.value = true
+  // Calculamos montos finales
   const payload = { ...form.value, subtotal: subtotal.value, total: total.value }
 
   try {
      if (isEditing.value) {
-         await api.put(`/api/facturas/${editingId.value}`, payload)
+         // UPDATE
+         const res = await api.put(`/api/facturas/${editingId.value}`, payload)
+         
+         // Actualización manual para no recargar todo
+         const index = facturas.value.findIndex(f => f.id_factura === editingId.value)
+         if (index !== -1) {
+             const updated = res.data.factura; 
+             // Mantenemos los nombres visibles
+             const contratoInfo = contratos.value.find(c => c.id_contrato === updated.contrato_id)
+             updated.nombre_cliente = contratoInfo ? contratoInfo.nombre_cliente : '...'
+             updated.nombre_proyecto = contratoInfo ? contratoInfo.nombre_proyecto : '...'
+             updated._showDetail = false
+             updated.items = form.value.items // Mantenemos items locales
+             facturas.value[index] = updated
+         }
      } else {
-         await api.post('/api/facturas', payload)
+         // CREATE
+         const res = await api.post('/api/facturas', payload)
+         const nuevaFactura = res.data
+         
+         // INYECCIÓN DE NOMBRES (Esto hace que se visualice guardada al instante)
+         const contratoInfo = contratos.value.find(c => c.id_contrato === nuevaFactura.contrato_id)
+         
+         if (contratoInfo) {
+             nuevaFactura.nombre_cliente = contratoInfo.nombre_cliente
+             nuevaFactura.nombre_proyecto = contratoInfo.nombre_proyecto
+         } else {
+             nuevaFactura.nombre_cliente = 'Cargando...' // Fallback
+         }
+
+         nuevaFactura._showDetail = false
+         facturas.value.unshift(nuevaFactura) // Se agrega arriba
      }
-     await getFacturas()
+     
      showModal.value = false
   } catch (e) {
      console.error(e)
-     alert('Error al guardar la factura.')
+     alert('Error al guardar la factura: ' + (e.response?.data?.message || e.message))
   } finally {
      isLoading.value = false
   }

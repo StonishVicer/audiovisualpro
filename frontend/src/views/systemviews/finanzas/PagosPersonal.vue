@@ -1,361 +1,364 @@
-<template>
-  <div class="h-screen flex flex-col bg-white">
-    <!-- Header -->
-    <div class="border-b border-gray-200 pb-3 mb-4 p-4">
-      <h3 class="text-center font-bold text-lg text-gray-800">Pagos al Personal</h3>
-    </div>
-
-    <!-- Controles Superiores -->
-    <div class="mb-3 flex flex-col sm:flex-row justify-between items-center gap-3 px-4">
-      <div class="w-full sm:w-auto">
-        <input
-          v-model="query"
-          type="text"
-          placeholder="Buscar pago, personal o motivo..."
-          class="transition w-full sm:w-[420px] border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-        />
-      </div>
-
-      <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-        <button @click="openNew" class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg transition">
-          <Icon icon="mdi:plus" width="20" height="20" class="mr-2" /> Nuevo Pago
-        </button>
-        <button @click="getPagos" class="flex items-center bg-gray-500 hover:bg-gray-600 text-white font-semibold p-2 rounded-lg transition" title="Recargar">
-          <Icon icon="material-symbols:refresh" width="20" height="20" />
-        </button>
-      </div>
-    </div>
-
-    <!-- Tabla de Datos -->
-    <div class="flex-1 overflow-y-auto border-t border-gray-200 bg-gray-50 p-4">
-      <div v-if="loadingPagos" class="p-8 text-center text-gray-600 flex flex-col items-center">
-        <Icon icon="eos-icons:loading" class="animate-spin mb-2" width="30" />
-        Cargando pagos...
-      </div>
-
-      <div v-else-if="filtered.length" class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
-        <table class="table-auto w-full text-sm">
-          <thead class="bg-gray-100 text-gray-700 uppercase text-xs font-bold">
-            <tr>
-              <th class="px-4 py-3 text-left">ID</th>
-              <th class="px-4 py-3 text-left">Personal</th>
-              <th class="px-4 py-3 text-left">Asignación</th>
-              <th class="px-4 py-3 text-left">Monto</th>
-              <th class="px-4 py-3 text-left">Fecha</th>
-              <th class="px-4 py-3 text-left">Motivo</th>
-              <th class="px-4 py-3 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-for="p in filtered" :key="p.id_pago" class="hover:bg-green-50 transition">
-              <td class="px-4 py-3 font-medium text-gray-900">{{ p.id_pago }}</td>
-              <td class="px-4 py-3">{{ p.personal?.nombre_personal ?? p.id_personal ?? '—' }}</td>
-              <td class="px-4 py-3">
-                <!-- Lógica para mostrar nombre basado en ID manual si no viene populado -->
-                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                  {{ getNombreAsignacion(p.id_asignacion) }}
-                </span>
-              </td>
-              <td class="px-4 py-3 font-semibold text-green-700">${{ Number(p.monto_pagado).toFixed(2) }}</td>
-              <td class="px-4 py-3 text-gray-600">{{ formatDate(p.fecha_pago) }}</td>
-              <td class="px-4 py-3 text-gray-600 italic">{{ p.motivo_pago || '—' }}</td>
-              <td class="px-4 py-3 flex justify-center gap-2">
-                <button @click="openEdit(p)" class="text-yellow-600 hover:text-yellow-800 bg-yellow-100 hover:bg-yellow-200 p-1.5 rounded transition" title="Editar">
-                  <Icon icon="mdi:pencil" width="18" />
-                </button>
-                <button @click="deletePago(p.id_pago)" class="text-red-600 hover:text-red-800 bg-red-100 hover:bg-red-200 p-1.5 rounded transition" title="Eliminar">
-                  <Icon icon="mdi:trash-can" width="18" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div v-else class="text-center text-gray-500 p-10 bg-white rounded-lg border border-dashed border-gray-300">
-        <Icon icon="mdi:file-document-outline" width="48" class="mx-auto text-gray-400 mb-2" />
-        No se encontraron pagos registrados con ese criterio.
-      </div>
-    </div>
-
-    <!-- Modal Formulario -->
-    <Modal size="md" :show="showModal" @close="closeModal" :title="isEditing ? 'Editar Pago' : 'Nuevo Pago'">
-      <div class="p-1">
-        <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded border border-red-200 flex items-center">
-          <Icon icon="mdi:alert-circle" class="mr-2" /> {{ errorMessage || 'Por favor complete todos los campos requeridos.' }}
-        </div>
-
-        <form @submit.prevent="savePago" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Personal <span class="text-red-500">*</span></label>
-              <select v-model="form.id_personal" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
-                <option value="" disabled>-- Seleccionar --</option>
-                <option v-for="per in personal" :key="per.id_personal" :value="per.id_personal">
-                  {{ per.nombre_personal }}
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Asignación <span class="text-red-500">*</span></label>
-              <select v-model="form.id_asignacion" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
-                <option value="" disabled>-- Seleccionar --</option>
-                <option v-for="a in asignaciones" :key="a.id_asignacion" :value="a.id_asignacion">
-                  {{ a.nombre_asignacion }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Monto ($) <span class="text-red-500">*</span></label>
-              <input v-model.number="form.monto_pagado" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago <span class="text-red-500">*</span></label>
-              <input v-model="form.fecha_pago" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" />
-            </div>
-          </div>
-          
-          <div>
-             <label class="block text-sm font-medium text-gray-700 mb-1">Motivo / Descripción</label>
-             <textarea v-model="form.motivo_pago" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"></textarea>
-          </div>
-
-          <div class="flex gap-3 mt-6 pt-4 border-t border-gray-100">
-            <button type="button" @click="closeModal" class="flex-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition">
-              Cancelar
-            </button>
-            <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition flex justify-center items-center" :disabled="isLoading">
-               <Icon v-if="isLoading" icon="eos-icons:loading" class="animate-spin mr-2" />
-               {{ isEditing ? 'Actualizar' : 'Guardar Pago' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </Modal>
-
-    <!-- Usamos el Toast solo si existe en tu proyecto, sino se puede remover -->
-    <Toast v-if="isLoading" message="Procesando solicitud..." type="loading" />
-  </div>
-</template>
-
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { Icon } from '@iconify/vue'
-// Asegúrate que estas rutas sean correctas en tu proyecto
+import { Icon } from '@iconify/vue';
 import Modal from '../../../components/Modal.vue'
 import Toast from '../../../components/Toast.vue'
+import { onMounted, ref, computed } from 'vue'
 import api from '../../../services/api.js'
+import Confirmation from '../../../components/Confirmation.vue'
 
-// Estado
+// --- ESTADO ---
 const pagos = ref([])
-const personal = ref([])
+const personal = ref([]) 
+// CAMBIO: Lista estática de categorías (Strings directos)
+const categorias = ref(['Sueldo', 'Pagos Extra', 'Bonificación'])
 
-
-const asignaciones = ref([
-    { id_asignacion: 1, nombre_asignacion: 'Sueldo' },
-    { id_asignacion: 2, nombre_asignacion: 'Pagos extra' }
-])
-
-const loadingPagos = ref(false)
-const isLoading = ref(false)
-const error = ref(false)
-const errorMessage = ref('')
-const showModal = ref(false)
-const isEditing = ref(false)
-const editingId = ref(null)
-const query = ref('')
-
+// --- FORMULARIO ---
 const form = ref({
-  id_personal: '',
-  id_asignacion: '',
-  monto_pagado: 0,
-  fecha_pago: new Date().toISOString().slice(0,10),
-  motivo_pago: ''
-})
-
-// Helper para mostrar nombres correctos en la tabla
-const getNombreAsignacion = (id) => {
-    // Busca en el array fijo primero
-    const found = asignaciones.value.find(a => a.id_asignacion == id)
-    if (found) return found.nombre_asignacion
-    
-    // Si no encuentra (caso legacy), devuelve el ID
-    return id
-}
-
-// Computed Filter
-const filtered = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return pagos.value
-  return pagos.value.filter(p => {
-    // Obtenemos el nombre de la asignación usando la función helper
-    const nombreAsignacion = getNombreAsignacion(p.id_asignacion)
-    
-    return String(p.motivo_pago || '').toLowerCase().includes(q) ||
-           String(p.personal?.nombre_personal || p.id_personal || '').toLowerCase().includes(q) ||
-           String(nombreAsignacion || '').toLowerCase().includes(q)
-  })
-})
-
-// API Calls
-const getPersonal = async () => {
-  try {
-    const res = await api.get('/api/personal')
-    personal.value = res.data
-  } catch (e) {
-    console.error('Error cargando personal:', e)
-  }
-}
-
-// NOTA: Se eliminó getAsignaciones() ya que ahora son fijas
-
-const getPagos = async () => {
-  loadingPagos.value = true
-  try {
-    const res = await api.get('/api/pagos_personal')
-    pagos.value = res.data || [] 
-  } catch (e) {
-    console.error('Error cargando pagos:', e)
-    pagos.value = []
-  } finally {
-    loadingPagos.value = false
-  }
-}
-
-// Actions
-const openNew = () => {
-  resetForm()
-  isEditing.value = false
-  editingId.value = null
-  showModal.value = true
-}
-
-const openEdit = (p) => {
-  resetForm()
-  isEditing.value = true
-  editingId.value = p.id_pago
-  
-  form.value.id_personal = p.id_personal ?? (p.personal?.id_personal ?? '')
-  form.value.id_asignacion = p.id_asignacion ?? (p.asignacion?.id_asignacion ?? '')
-  form.value.monto_pagado = Number(p.monto_pagado ?? 0)
-  
-  if (p.fecha_pago) {
-      form.value.fecha_pago = p.fecha_pago.toString().split('T')[0]
-  }
-  
-  form.value.motivo_pago = p.motivo_pago ?? ''
-  showModal.value = true
-}
-
-const closeModal = () => {
-  showModal.value = false
-  error.value = false
-  setTimeout(() => resetForm(), 300)
-}
-
-const resetForm = () => {
-  form.value = {
     id_personal: '',
-    id_asignacion: '',
-    monto_pagado: 0,
+    categoria_pg: '', // CAMBIO: Ahora guarda el string directo
+    monto_pagado: '',
     fecha_pago: new Date().toISOString().slice(0,10),
     motivo_pago: ''
-  }
-  error.value = false
-  errorMessage.value = ''
+})
+
+// --- UI STATES ---
+const showModal = ref(false)
+const isConnecting = ref(false)
+const error = ref(false)
+const loadingPagos = ref(false)
+const searchQuery = ref('')
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+
+const showConfirmation = ref(false)
+const pagoDeleteID = ref(null)
+
+// --- HELPERS ---
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => { showToast.value = false }, 3000);
 }
 
-const validar = () => {
-  errorMessage.value = 'Por favor complete todos los campos requeridos.'
-  if (!form.value.id_personal || !form.value.id_asignacion) return false
-  if (Number(form.value.monto_pagado) <= 0) {
-      errorMessage.value = 'El monto debe ser mayor a 0.'
-      return false
-  }
-  if (!form.value.fecha_pago) return false
-  return true
-}
-
-const savePago = async () => {
-  if (!validar()) {
-    error.value = true
-    return
-  }
-  error.value = false
-  isLoading.value = true
-
-  const payload = {
-    id_personal: Number(form.value.id_personal),
-    id_asignacion: Number(form.value.id_asignacion),
-    monto_pagado: Number(form.value.monto_pagado),
-    fecha_pago: form.value.fecha_pago,
-    motivo_pago: form.value.motivo_pago
-  }
-  
-  // Debug: Imprimir lo que se envía para verificar
-  console.log('Enviando payload:', payload);
-
-  try {
-    if (isEditing.value && editingId.value) {
-      await api.put(`/api/pagos_personal/${editingId.value}`, payload)
-    } else {
-      const res = await api.post('/api/pagos_personal', payload)
+const limpiarCampos = () => {
+    form.value = {
+        id_personal: '',
+        categoria_pg: '',
+        monto_pagado: '',
+        fecha_pago: new Date().toISOString().slice(0,10),
+        motivo_pago: ''
     }
-    
-    // Siempre recargar para ver cambios reflejados con las asignaciones fijas
-    await getPagos()
-    
-    closeModal()
-  } catch (e) {
-    console.error('Error detallado guardando pago:', e)
-    
-    // Mejor manejo de error para mostrar lo que dice el backend
-    let msg = 'Error desconocido'
-    if (e.response && e.response.data) {
-        msg = e.response.data.message || JSON.stringify(e.response.data)
-    } else if (e.message) {
-        msg = e.message
-    }
-    
-    errorMessage.value = `Error del servidor: ${msg}`
-    error.value = true
-    // No cerramos el modal para que veas el error
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const deletePago = async (id) => {
-  if (!confirm('¿Está seguro de eliminar este registro de pago?')) return
-  
-  isLoading.value = true 
-  try {
-    await api.delete(`/api/pagos_personal/${id}`)
-    pagos.value = pagos.value.filter(p => p.id_pago !== id)
-  } catch (e) {
-    console.error('Error eliminando pago:', e)
-    const serverMessage = e.response?.data?.message || e.message || 'Error desconocido'
-    alert(`No se pudo eliminar el pago: ${serverMessage}`)
-  } finally {
-    isLoading.value = false
-  }
+    error.value = false
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return '—'
-  const datePart = dateString.toString().split('T')[0]
-  const [year, month, day] = datePart.split('-')
-  return `${day}/${month}/${year}`
+    if (!dateString) return '—'
+    const datePart = dateString.toString().split('T')[0]
+    const [year, month, day] = datePart.split('-')
+    return `${day}/${month}/${year}`
+}
+
+// --- FILTER ---
+const filteredPagos = computed(() => {
+    const q = searchQuery.value.toLowerCase()
+    if (!q) return pagos.value
+    return pagos.value.filter(p => 
+        (p.nombre_personal || '').toLowerCase().includes(q) ||
+        (p.categoria_pg || '').toLowerCase().includes(q) || // Busca también por categoría
+        (p.motivo_pago || '').toLowerCase().includes(q)
+    )
+})
+
+// --- API ACTIONS ---
+
+// 1. Cargar Personal
+const getPersonal = async () => {
+    try {
+        const res = await api.get('/api/personal')
+        personal.value = res.data
+    } catch (err) {
+        console.error('Error cargando personal:', err)
+        displayToast('Error cargando lista de personal', 'error')
+    }
+}
+
+// 2. Cargar Pagos
+const getPagos = async () => {
+    loadingPagos.value = true
+    try {
+        const res = await api.get('/api/pagos_personal')
+        pagos.value = res.data
+    } catch (err) {
+        console.error('Error cargando pagos:', err)
+    } finally {
+        loadingPagos.value = false
+    }
+}
+
+// 3. Crear Pago
+const createPago = async () => {
+    if (!form.value.id_personal || !form.value.categoria_pg || !form.value.monto_pagado || !form.value.fecha_pago) {
+        error.value = true
+        return
+    }
+    
+    isConnecting.value = true
+    error.value = false
+
+    try {
+        // CAMBIO: Enviamos el payload limpio
+        const payload = {
+            id_personal: Number(form.value.id_personal),
+            categoria_pg: form.value.categoria_pg, // String directo
+            monto_pagado: Number(form.value.monto_pagado),
+            fecha_pago: form.value.fecha_pago,
+            motivo_pago: form.value.motivo_pago
+        }
+
+        const res = await api.post('/api/pagos_personal', payload)
+        
+        // --- ACTUALIZACIÓN UI ---
+        const nuevoPago = res.data
+        
+        // Solo necesitamos buscar el nombre del personal
+        const personalEncontrado = personal.value.find(p => p.id_personal == nuevoPago.id_personal)
+        nuevoPago.nombre_personal = personalEncontrado ? personalEncontrado.nombre_personal : '...'
+        
+        // La categoría ya viene lista en el objeto porque la enviamos como string
+        // (El backend devuelve lo que insertó)
+        
+        pagos.value.unshift(nuevoPago) 
+        
+        limpiarCampos()
+        showModal.value = false
+        displayToast('Pago registrado correctamente', 'success')
+
+    } catch (err) {
+        console.error('Error al crear pago:', err);
+        displayToast('Error al registrar el pago', 'error')
+    } finally {
+        isConnecting.value = false
+    }
+}
+
+// 4. Eliminar Pago
+const requestDeletePago = (id) => {
+    pagoDeleteID.value = id
+    showConfirmation.value = true
+}
+
+const deletePago = async () => {
+    const id = pagoDeleteID.value
+    showConfirmation.value = false
+    if (!id) return
+    isConnecting.value = true
+
+    try {
+        await api.delete(`/api/pagos_personal/${id}`)
+        pagos.value = pagos.value.filter(p => p.id_pago !== id)
+        displayToast('Pago eliminado', 'success')
+    } catch (err) {
+        console.error('Error al eliminar:', err)
+        displayToast('Error al eliminar el pago', 'error')
+    } finally {
+        isConnecting.value = false
+    }
 }
 
 onMounted(() => {
-  getPersonal()
-  // getAsignaciones() <- Eliminado
-  getPagos()
+    getPersonal()
+    getPagos()
 })
 </script>
+
+<template>
+    <div class="h-screen flex flex-col">
+        <div class="border-b border-gray-200 pb-3 mb-4">
+            <h3 class="text-center font-bold text-lg">Gestión de Pagos</h3>
+        </div>
+
+        <div class="mb-3">
+            <div class="flex justify-end">
+                <button @click="showModal = true" class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors">
+                    <Icon icon="mdi:cash-plus" width="25" height="25" class="mr-2" />
+                    Nuevo Pago
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="flex space-x-2">
+                <div class="relative flex-1">
+                    <Icon
+                        icon="material-symbols:search"
+                        width="25"
+                        height="25"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Buscar por personal, categoría o motivo..."
+                    >
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg min-h-[400px] max-h-[calc(100vh-240px)]">
+            <div>
+                <div v-if="loadingPagos">
+                    <div class="flex items-center justify-center text-center mt-3">
+                        <div class="flex text-[15px] font-semibold text-blue-500 items-center justify-center w-full bg-blue-100 border border-blue-200 p-3 mx-3 rounded-xl shadow-md">
+                            <Icon icon="mdi:loading" width="25" height="25" class="mr-2 animate-spin" />
+                            Cargando pagos...
+                        </div>
+                    </div>
+                </div>
+                
+                <table v-else-if="filteredPagos.length > 0" class="table-auto w-full">
+                    <thead>
+                        <tr class="bg-green-100 text-green-900">
+                            <th class="px-4 py-2 text-left">Personal</th>
+                            <th class="px-4 py-2 text-left">Categoría</th>
+                            <th class="px-4 py-2 text-left">Monto ($)</th>
+                            <th class="px-4 py-2 text-left">Fecha</th>
+                            <th class="px-4 py-2 text-left">Motivo</th>
+                            <th class="px-4 py-2 text-left">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="pago in filteredPagos" :key="pago.id_pago" class="border-b border-green-100 hover:bg-green-50 transition">
+                            <td class="px-4 py-2 font-medium">{{ pago.nombre_personal || pago.personal?.nombre_personal || '—' }}</td>
+                            
+                            <td class="px-4 py-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-semibold">
+                                    {{ pago.categoria_pg }}
+                                </span>
+                            </td>
+
+                            <td class="px-4 py-2 font-bold text-green-700">${{ Number(pago.monto_pagado).toFixed(2) }}</td>
+                            <td class="px-4 py-2 text-gray-600">{{ formatDate(pago.fecha_pago) }}</td>
+                            <td class="px-4 py-2 text-gray-500 italic text-sm truncate max-w-xs">{{ pago.motivo_pago || '—' }}</td>
+                            <td class="px-4 py-2 flex items-center gap-2">
+                                <button
+                                    @click="requestDeletePago(pago.id_pago)"
+                                    class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
+                                >
+                                    <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div v-else>
+                    <div class="flex items-center justify-center text-center mt-3">
+                        <div class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                            <Icon icon="mdi:alert-circle-outline" width="25" height="25" class="mr-2" />
+                            No hay pagos registrados.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <Modal
+            v-if="showModal" :show="showModal" @close="showModal = false"
+            size="md"
+            title="Nuevo Pago"
+        >
+            <div>
+                <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md mb-3">
+                    <Icon icon="mdi:error" width="25" heigth="25" class="mr-2" />
+                    Complete los campos obligatorios.
+                </div>
+
+                <form @submit.prevent="createPago" class="mb-2">
+                    <div class="mb-2 space-y-3">
+                        
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Personal</label>
+                            <select v-model="form.id_personal" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                                <option value="" disabled>-- Seleccionar --</option>
+                                <option v-for="p in personal" :key="p.id_personal" :value="p.id_personal">
+                                    {{ p.nombre_personal }} {{ p.apellido_personal || '' }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="flex flex-col">
+                                <label class="text-sm font-semibold text-gray-500 mb-1">Categoría</label>
+                                <select v-model="form.categoria_pg" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                                    <option value="" disabled>-- Seleccionar --</option>
+                                    <option v-for="cat in categorias" :key="cat" :value="cat">
+                                        {{ cat }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="flex flex-col">
+                                <label class="text-sm font-semibold text-gray-500 mb-1">Monto ($)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    v-model="form.monto_pagado"
+                                    class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                    placeholder="0.00"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Fecha</label>
+                            <input
+                                type="date"
+                                v-model="form.fecha_pago"
+                                class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            >
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Motivo / Descripción</label>
+                            <textarea
+                                rows="2"
+                                v-model="form.motivo_pago"
+                                class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                placeholder="Ej: Adelanto de quincena..."
+                            ></textarea>
+                        </div>
+
+                    </div>
+                    
+                    <button type="submit" class="w-full mt-4 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold px-2 py-2 rounded-lg transition-colors">
+                        <Icon v-if="isConnecting" icon="eos-icons:loading" class="animate-spin mr-2" />
+                        Registrar Pago
+                    </button>
+                </form>
+
+                <button @click="limpiarCampos" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-2 rounded-lg transition-colors mt-2">
+                    Limpiar campos
+                </button>
+            </div>
+        </Modal>
+
+        <Toast
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar pago"
+            message="¿Está seguro/a que desea eliminar este registro de pago?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="deletePago"
+            @cancel="showConfirmation = false"
+        />
+    </div>
+</template>

@@ -5,23 +5,26 @@ import {
     updatePago, 
     deletePago,
     getPagoById 
-} from '../controllers/pagosController.js'
+} from '../controllers/pagosController.js' // Asegúrate que la ruta al controlador sea correcta
 
 const router = Router()
 
+// ERROR COMÚN: No pongas '/pagos_personal' aquí. Pon solo '/'.
+// Ya definiste el prefijo '/api/pagos_personal' en tu app.js
 
-router.get('/pagos_personal', getPagos)
+// Obtener todos los pagos -> GET /api/pagos_personal
+router.get('/', getPagos)
 
+// Crear pago -> POST /api/pagos_personal
+router.post('/', createPago)
 
-router.get('/pagos_personal/:id', getPagoById)
+// Obtener un pago -> GET /api/pagos_personal/:id
+router.get('/:id', getPagoById)
 
+// Actualizar -> PUT /api/pagos_personal/:id
+router.put('/:id', updatePago)
 
-router.post('/pagos_personal', createPago)
-
-// Actualizar un pago -> PUT /api/pagos_personal/:id
-router.put('/pagos_personal/:id', updatePago)
-
-// Eliminar un pago -> DELETE /api/pagos_personal/:id
-router.delete('/pagos_personal/:id', deletePago)
+// Eliminar -> DELETE /api/pagos_personal/:id
+router.delete('/:id', deletePago)
 
 export default router
