@@ -6,25 +6,23 @@ import Confirmation from '../../../components/Confirmation.vue'
 import { onMounted, ref, computed } from 'vue'
 import api from '../../../services/api.js'
 
-// --- DATOS ---
 const entregables = ref([])
-const estados = ref([]) // Lista para traducir ID -> Nombre
+const estados = ref([])
+const proyectos = ref([])
 const searchQuery = ref('')
 
-// --- FORMULARIO ---
 const id_entregable_editar = ref(null)
 const titulo = ref('')
 const fileLink = ref('')
 const fecha_entrega = ref('')
-const file = ref(null)
+const selectedEstado = ref('')
+const selectedProyecto = ref(null)
 
-// --- UI STATES ---
 const showModal = ref(false)
 const isConnecting = ref(false)
 const error = ref(false)
 const loadingEntregables = ref(false)
 
-// --- TOAST & CONFIRM ---
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
@@ -32,7 +30,11 @@ const showConfirmation = ref(false)
 const entregableDeleteID = ref(null)
 
 // --- COMPUTADOS ---
-const nombreArchivo = computed(() => file.value ? file.value.name : '')
+
+// Calcula la fecha de hoy en formato YYYY-MM-DD para el atributo min=""
+const todayDate = computed(() => {
+    return new Date().toISOString().split('T')[0]
+})
 
 const entregablesFiltrados = computed(() => {
     if (!searchQuery.value) return entregables.value
@@ -41,13 +43,11 @@ const entregablesFiltrados = computed(() => {
     )
 })
 
-// --- HELPERS VISUALES (El truco para los colores) ---
+// --- HELPERS VISUALES ---
 const getEstadoInfo = (idEstado) => {
-    // 1. Busamos el nombre del estado usando el ID
     const estado = estados.value.find(e => e.id_estado_entregable === idEstado)
     const nombre = estado ? estado.nombre_estado : 'Sin Estado'
     
-    // 2. Asignamos color según el texto (ya que la BD no tiene color)
     let colorClass = 'bg-gray-100 text-gray-800 border-gray-200'
     const n = nombre.toLowerCase()
 
@@ -66,95 +66,102 @@ const displayToast = (message, type) => {
     setTimeout(() => { showToast.value = false }, 3000)
 }
 
-// --- LIMPIEZA ---
 const limpiarCampos = () => {
     titulo.value = ''
     fileLink.value = ''
     fecha_entrega.value = ''
-    file.value = null
+    selectedEstado.value = ''
+    selectedProyecto.value = null
     id_entregable_editar.value = null
     error.value = false
-    const fileInput = document.getElementById('file-upload')
-    if(fileInput) fileInput.value = ''
 }
 
 const validarFormulario = () => {
     if (!titulo.value.trim()) return false
-    // Debe haber link O archivo O estar editando (y mantener el anterior)
-    if (!fileLink.value.trim() && !file.value && !id_entregable_editar.value) return false
+    
+    if (!selectedProyecto.value) return false
+    
+    // 3. Link Obligatorio (ya que quitamos archivo, el link es lo único que queda)
+    if (!fileLink.value.trim()) return false
+
+    // 4. Validar Fecha (No permitir fechas pasadas)
+    if (fecha_entrega.value) {
+        if (fecha_entrega.value < todayDate.value) {
+            displayToast('La fecha no puede ser anterior a hoy', 'error')
+            return false
+        }
+    }
+
     return true
 }
 
 // --- API CALLS ---
 
-// 1. Obtener Estados (Para poder mostrar el nombre en la tabla)
 const getEstados = async () => {
     try {
-        const res = await api.get('/api/estadosentregable') // Asegurate que esta ruta coincida con tu server.js
+        const res = await api.get('/api/estadosentregable') 
         estados.value = res.data || []
-    } catch (err) {
-        console.error('Error cargando estados:', err)
-    }
+    } catch (err) { console.error(err) }
 }
 
-// 2. Obtener Entregables
+const getProyectos = async () => {
+    try {
+        const res = await api.get('/api/proyectos')
+        proyectos.value = res.data || []
+    } catch (err) { console.error(err) }
+}
+
 const getEntregables = async () => {
     loadingEntregables.value = true
     try {
         const res = await api.get('/api/entregables')
         entregables.value = res.data || []
     } catch (err) {
-        console.error('Error al obtener entregables:', err)
+        console.error(err)
         displayToast('Error de conexión', 'error')
     } finally {
         loadingEntregables.value = false
     }
 }
 
-// 3. Crear / Editar
-const onFileChange = (e) => {
-    const f = e.target.files && e.target.files[0]
-    if (f) file.value = f
-    else file.value = null
-}
-
 const handleSubmit = async () => {
     isConnecting.value = true
     try {
         if (!validarFormulario()) {
-            error.value = true; isConnecting.value = false; return
+            if (!fecha_entrega.value || fecha_entrega.value >= todayDate.value) {
+                 error.value = true; 
+            }
+            isConnecting.value = false; 
+            return
         }
         error.value = false
 
-        // Usamos FormData para enviar archivo + texto
-        const fd = new FormData()
-        fd.append('titulo', titulo.value)
-        fd.append('link', fileLink.value)
-        fd.append('fecha_entrega', fecha_entrega.value) // Agregamos fecha
-        if (file.value) {
-            fd.append('archivo', file.value)
+    
+        
+        const payload = {
+            titulo: titulo.value,
+            link: fileLink.value,
+            fecha_entrega: fecha_entrega.value,
+            id_estado_entregable: selectedEstado.value || null,
+            id_proyecto: selectedProyecto.value
         }
 
         let res
         if (id_entregable_editar.value) {
             // PUT
-            res = await api.put(`/api/entregables/${id_entregable_editar.value}`, fd)
-            // Actualizamos la lista localmente
+            res = await api.put(`/api/entregables/${id_entregable_editar.value}`, payload)
             const idx = entregables.value.findIndex(e => e.id === id_entregable_editar.value)
             if (idx !== -1) {
-                // Mantenemos el ID de estado viejo o recargamos todo
-                // Para simplificar, recargamos la lista o mezclamos datos:
                 entregables.value[idx] = { ...entregables.value[idx], ...res.data.entregable } 
             }
             displayToast('Entregable actualizado', 'success')
-            getEntregables() // Recargamos para ver cambios limpios
+            getEntregables() 
         } else {
             // POST
-            res = await api.post('/api/entregables', fd)
-            entregables.value.unshift(res.data) // Agregamos al principio
+            res = await api.post('/api/entregables', payload)
+            entregables.value.unshift(res.data)
             displayToast('Entregable creado', 'success')
         }
-
         limpiarCampos()
         showModal.value = false
 
@@ -166,7 +173,6 @@ const handleSubmit = async () => {
     }
 }
 
-// 4. Eliminar
 const requestDeleteEntregable = (id) => {
     entregableDeleteID.value = id
     showConfirmation.value = true
@@ -190,13 +196,13 @@ const deleteEntregable = async () => {
     }
 }
 
-// 5. Preparar Edición
 const openEditModal = (item) => {
     limpiarCampos()
     id_entregable_editar.value = item.id
     titulo.value = item.titulo
     fileLink.value = item.link || ''
-    // Convertimos fecha ISO a YYYY-MM-DD para el input date
+    selectedEstado.value = item.id_estado_entregable || ''
+    selectedProyecto.value = item.id_proyecto || null 
     if(item.fecha_entrega) {
         fecha_entrega.value = item.fecha_entrega.split('T')[0]
     }
@@ -204,7 +210,8 @@ const openEditModal = (item) => {
 }
 
 onMounted(() => {
-    getEstados() // Cargamos los estados primero
+    getEstados()
+    getProyectos()
     getEntregables()
 })
 </script>
@@ -248,7 +255,8 @@ onMounted(() => {
                     <thead>
                         <tr class="bg-green-100 text-green-900">
                             <th class="px-4 py-2 text-left">Título</th>
-                            <th class="px-4 py-2 text-left">Contenido</th>
+                            <th class="px-4 py-2 text-left">Proyecto</th>
+                            <th class="px-4 py-2 text-left">Link</th>
                             <th class="px-4 py-2 text-left">Fecha Entrega</th>
                             <th class="px-4 py-2 text-left">Estado</th>
                             <th class="px-4 py-2 text-left">Acciones</th>
@@ -258,16 +266,17 @@ onMounted(() => {
                         <tr v-for="item in entregablesFiltrados" :key="item.id" class="border-b border-green-100 hover:bg-green-50 transition">
                             <td class="px-4 py-2 font-medium">{{ item.titulo }}</td>
                             
-                            <td class="px-4 py-2">
-                                <div v-if="item.link" class="flex items-center text-blue-600">
-                                    <Icon icon="mdi:link" width="18" class="mr-1"/>
-                                    <a :href="item.link" target="_blank" class="hover:underline text-sm truncate max-w-[150px]">Link Externo</a>
+                            <td class="px-4 py-2 text-gray-700">
+                                {{ proyectos.find(p => p.id_proyecto === item.id_proyecto)?.nombre_proyecto || 'N/A' }}
+                            </td>
+                            
+                            <td class="px-4 py-2 text-sm">
+                                <div v-if="item.link">
+                                    <a :href="item.link" target="_blank" class="flex items-center text-blue-600 hover:underline">
+                                        <Icon icon="mdi:link" class="mr-1" /> Link Externo
+                                    </a>
                                 </div>
-                                <div v-else-if="item.archivo" class="flex items-center text-purple-600">
-                                    <Icon icon="mdi:paperclip" width="18" class="mr-1"/>
-                                    <a :href="item.archivo.url" target="_blank" class="hover:underline text-sm truncate max-w-[150px]">Descargar Archivo</a>
-                                </div>
-                                <div v-else class="text-gray-400 text-sm italic">Sin contenido</div>
+                                <div v-else class="text-gray-400 italic">Sin enlace</div>
                             </td>
 
                             <td class="px-4 py-2 text-sm text-gray-600">
@@ -307,18 +316,43 @@ onMounted(() => {
             <div>
                 <div v-if="error" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mb-3 rounded-xl shadow-md">
                     <Icon icon="mdi:error" width="25" class="mr-2" />
-                    Complete el título y agregue contenido.
+                    Complete Título, Proyecto y Link obligatorios.
                 </div>
 
                 <form @submit.prevent="handleSubmit" class="mb-2">
+                    
                     <div class="flex flex-col mb-4">
                         <label class="text-sm font-semibold text-gray-500 mb-1">Título</label>
                         <input type="text" v-model="titulo" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Ej: Video Final v1">
                     </div>
 
                     <div class="flex flex-col mb-4">
-                        <label class="text-sm font-semibold text-gray-500 mb-1">Fecha de Entrega Estimada</label>
-                        <input type="date" v-model="fecha_entrega" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <label class="text-sm font-semibold text-gray-500 mb-1">Proyecto</label>
+                        <select v-model="selectedProyecto" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+                            <option :value="null">-- Seleccionar Proyecto --</option>
+                            <option v-for="p in proyectos" :key="p.id_proyecto" :value="p.id_proyecto">
+                                {{ p.nombre_proyecto }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="flex space-x-2 mb-4">
+                        <div class="flex flex-col w-1/2">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Estado</label>
+                            <select v-model="selectedEstado" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+                                <option value="">-- Estado --</option>
+                                <option v-for="e in estados" :key="e.id_estado_entregable" :value="e.id_estado_entregable">{{ e.nombre_estado }}</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col w-1/2">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Fecha Entrega</label>
+                            <input 
+                                type="date" 
+                                v-model="fecha_entrega" 
+                                :min="todayDate" 
+                                class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            >
+                        </div>
                     </div>
 
                     <div class="flex flex-col mb-4">
@@ -326,27 +360,6 @@ onMounted(() => {
                         <div class="relative">
                             <Icon icon="mdi:link" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" width="20" />
                             <input type="url" v-model="fileLink" class="transition w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="https://...">
-                        </div>
-                    </div>
-
-                    <div class="relative flex py-2 items-center">
-                        <div class="flex-grow border-t border-gray-200"></div>
-                        <span class="flex-shrink-0 mx-4 text-gray-400 text-xs">O SUBIR ARCHIVO LOCAL</span>
-                        <div class="flex-grow border-t border-gray-200"></div>
-                    </div>
-
-                    <div class="mb-4">
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center transition-all hover:border-green-400 hover:bg-green-50 group">
-                            <input @change="onFileChange" type="file" class="hidden" id="file-upload" />
-                            <label for="file-upload" class="cursor-pointer flex flex-col items-center">
-                                <Icon icon="mdi:cloud-upload" width="40" height="40" class="text-gray-400 group-hover:text-green-500 mb-2 transition-colors" />
-                                <p class="text-gray-600 mb-1 font-medium">Click para seleccionar archivo</p>
-                            </label>
-                        </div>
-                        <div v-if="nombreArchivo" class="mt-2 flex items-center p-2 bg-green-50 text-green-700 rounded-lg border border-green-100">
-                            <Icon icon="mdi:file-check" width="20" class="mr-2"/>
-                            <span class="text-sm truncate font-medium">{{ nombreArchivo }}</span>
-                            <button type="button" @click="file = null" class="ml-auto text-green-700 hover:text-red-500"><Icon icon="mdi:close" width="18"/></button>
                         </div>
                     </div>
 

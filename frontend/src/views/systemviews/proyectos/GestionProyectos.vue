@@ -7,6 +7,7 @@ import Toast from '../../../components/Toast.vue'
 import Modal from '../../../components/Modal.vue'
 
 const proyectos_list = ref([])
+const clientes = ref([])
 
 const error = ref(false)
 const isConnecting = ref(false)
@@ -15,12 +16,17 @@ const loadingProyectos = ref(false)
 const tiposProyectos = ref([])
 const estadosProyectos = ref([])
 
+//FORM PROYECTO
 const nombre_proyecto = ref('')
 const id_tipo_proyecto = ref(null)
 const id_estado_proyecto = ref(null)
 const fechaInicio = ref('')
 const fechaFinEstimada = ref('')
 const presupuesto = ref(0)
+
+//FORM CONTRATO
+const id_cliente_seleccionado = ref('')
+const descripcion_servicios = ref('')
 
 const showModalDetalles = ref(false)
 const proyectoSeleccionado = ref({})
@@ -98,6 +104,16 @@ const validarFormulario = () => {
         !fechaInicio.value ||
         !fechaFinEstimada.value ||
         presupuesto.value === 0
+    ) {
+        return true
+    }
+    return false
+}
+
+const validarFormularioContrato = () => {
+    if (
+        id_cliente_seleccionado.value === null ||
+        !descripcion_servicios.value === null
     ) {
         return true
     }
@@ -262,6 +278,15 @@ const desasignarLocacion = async (nombreLocacion) => {
     }
 }
 
+const cargarClientes = async () => {
+    try {
+        const res = await api.get('/api/clientes')
+        clientes.value = res.data
+    } catch (err) {
+        console.log('Error al cargar los clientes: ', err)
+    }
+}
+
 const cargarTiposProyectos = async () => {
     try {
         const res = await api.get('/api/tiposproyecto')
@@ -281,7 +306,7 @@ const cargarEstadosProyectos = async () => {
 }
 
 const createProyecto = async () => {
-    if (validarFormulario()) {
+    if (validarFormulario() || validarFormularioContrato()) {
         error.value = true
         return
     }
@@ -313,10 +338,22 @@ const createProyecto = async () => {
             recursos_asignados: []
         }
 
+        const id_proyecto_creado = res.data.id_proyecto
+
+        const contratoPayload = {
+            id_proyecto: id_proyecto_creado,
+            id_cliente: id_cliente_seleccionado.value,
+            fecha_firma: fechaInicio.value,
+            monto_contrato: presupuesto.value,
+            descripcion_servicios: descripcion_servicios.value
+        }
+
+        const resContrato = await api.post('/api/contratos', contratoPayload)
+
         proyectos_list.value.push(nuevoProyecto)
         limpiarCampos()
         showModal.value = false
-        displayToast('Proyecto creado', 'success')
+        displayToast('Proyecto y contrato creados', 'success')
     } catch (err) {
         console.log('Error al crear el proyecto: ', err)
         displayToast('Error al crear el proyecto', 'error')
@@ -470,6 +507,7 @@ onMounted(() => {
     getProyectos()
     cargarLocaciones()
     cargarRecTecnicos()
+    cargarClientes()
 })
 </script>
 
@@ -553,35 +591,47 @@ onMounted(() => {
 
                 <form @submit.prevent="createProyecto" class="mb-2">
                     <div class="mb-2">
-                        <div class="flex flex-col mb-2">
-                            <label class="text-sm font-semibold text-gray-500 mb-1">Nombre del Proyecto</label>
-                            <input type="text" v-model="nombre_proyecto"
-                                class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-                                placeholder="Nombre" />
-                        </div>
-                        <div class="mb-2">
-                            <label class="text-sm font-semibold text-gray-500 mb-1">Tipo de Proyecto</label>
-                            <select v-model="id_tipo_proyecto"
-                                class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
-                                <option :value="null" selected disabled>Seleccione un tipo</option>
-                                <option v-for="tipo in tiposProyectos" :key="tipo.id_tipo_proyecto"
-                                    :value="tipo.id_tipo_proyecto">
-                                    {{ tipo.nombre_tipo }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="mb-2">
-                            <label class="text-sm font-semibold text-gray-500 mb-1">Estado de Proyecto</label>
-                            <select v-model="id_estado_proyecto"
-                                class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
-                                <option :value="null" selected disabled>Seleccione un estado</option>
-                                <option v-for="estado in estadosProyectos" :key="estado.id_estado_proyecto"
-                                    :value="estado.id_estado_proyecto">
-                                    {{ estado.nombre_estado }}
-                                </option>
-                            </select>
-                        </div>
+                        <h3 class="text-lg text-gray-500 underline uppercase font-semibold text-center mb-3">Datos generales del proyecto</h3>
                         <div class="grid grid-cols-2 gap-2">
+                            <div class="flex flex-col mb-2">
+                                <label class="text-sm font-semibold text-gray-500 mb-1">Nombre del Proyecto</label>
+                                <input type="text" v-model="nombre_proyecto"
+                                    class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                    placeholder="Nombre" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="text-sm font-semibold text-gray-500 mb-1">Tipo de Proyecto</label>
+                                <select v-model="id_tipo_proyecto"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
+                                    <option :value="null" selected disabled>Seleccione un tipo</option>
+                                    <option v-for="tipo in tiposProyectos" :key="tipo.id_tipo_proyecto"
+                                        :value="tipo.id_tipo_proyecto">
+                                        {{ tipo.nombre_tipo }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="text-sm font-semibold text-gray-500 mb-1">Estado de Proyecto</label>
+                                <select v-model="id_estado_proyecto"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
+                                    <option :value="null" selected disabled>Seleccione un estado</option>
+                                    <option v-for="estado in estadosProyectos" :key="estado.id_estado_proyecto"
+                                        :value="estado.id_estado_proyecto">
+                                        {{ estado.nombre_estado }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="text-sm font-semibold text-gray-500 mb-1">
+                                    Presupuesto:
+                                    <span v-if="presupuesto > 0" class="font-semibold text-green-500">
+                                        Bs. {{ presupuesto }}
+                                    </span>
+                                    <span v-else class="font-semibold text-red-400">Aun no hay presupuesto.</span>
+                                </label>
+                                <input type="number" v-model="presupuesto"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1" />
+                            </div>
                             <div class="mb-2">
                                 <label class="text-sm font-semibold text-gray-500 mb-1">Inicio</label>
                                 <input type="date" v-model="fechaInicio"
@@ -593,17 +643,22 @@ onMounted(() => {
                                     class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1" />
                             </div>
                         </div>
-
+                        <h3 class="text-lg text-gray-500 underline uppercase font-semibold text-center mb-3">Datos del contrato</h3>
                         <div class="mb-2">
-                            <label class="text-sm font-semibold text-gray-500 mb-1">
-                                Presupuesto:
-                                <span v-if="presupuesto > 0" class="font-semibold text-green-500">
-                                    Bs. {{ presupuesto }}
-                                </span>
-                                <span v-else class="font-semibold text-red-400">Aun no hay presupuesto.</span>
-                            </label>
-                            <input type="number" v-model="presupuesto"
-                                class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1" />
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Cliente contratante</label>
+                            <select v-model="id_cliente_seleccionado"
+                                class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1">
+                                <option :value="null" selected disabled>Seleccione un cliente</option>
+                                <option v-for="c in clientes" :key="c.id_cliente"
+                                    :value="c.id_cliente">
+                                    {{ c.nombre_cliente }} {{ c.rif_cliente }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="text-sm font-semibold text-gray-500 mb-1">Descripcion de servicios</label>
+                            <textarea v-model="descripcion_servicios" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 mt-1 resize-none" placeholder="Descripcion servicios">
+                            </textarea>
                         </div>
                     </div>
                     <button type="submit"

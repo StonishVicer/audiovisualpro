@@ -73,7 +73,7 @@ const estadosFiltrados = computed(() => {
 const getEstados = async () => {
     loadingEstados.value = true
     try {
-        const res = await api.get('/api/estados')
+        const res = await api.get('/api/estadosentregable')
         estados.value = res.data || []
         console.log('Estados obtenidos:', estados.value)
     } catch (err) {
@@ -99,10 +99,12 @@ const handleSubmit = async () => {
             color_estado: color_estado.value
         }
 
+        console.log('POST /api/estadosentregable payload:', payload)
+
         if (id_estado_editar.value) {
-            // Editar
-            const res = await api.put(`/api/estados/${id_estado_editar.value}`, payload)
-            const idx = estados.value.findIndex(e => e.id_estado === id_estado_editar.value)
+            // Editar (ruta de estados de entregable)
+            const res = await api.put(`/api/estadosentregable/${id_estado_editar.value}`, payload)
+            const idx = estados.value.findIndex(e => e.id_estado_entregable === id_estado_editar.value)
             if (idx !== -1) estados.value[idx] = res.data
             displayToast('Estado actualizado', 'success')
         } else {
@@ -114,16 +116,27 @@ const handleSubmit = async () => {
 
         showModal.value = false
         limpiarCampos()
-    } catch (err) {
+        } catch (err) {
         console.error('Error al guardar estado:', err)
-        displayToast('Error al procesar la solicitud', 'error')
+        // Normalizar mensaje del servidor a string para Toast
+        const data = err?.response?.data
+        let serverMsg = ''
+        if (!data) {
+            serverMsg = err.message || String(err)
+        } else if (typeof data === 'string') {
+            serverMsg = data
+        } else {
+            serverMsg = data.message || data.error || JSON.stringify(data)
+        }
+        console.error('Server response:', serverMsg)
+        displayToast(serverMsg || 'Error al procesar la solicitud', 'error')
     } finally {
         isConnecting.value = false
     }
 }
 
 const openEditModal = (item) => {
-    id_estado_editar.value = item.id_estado
+    id_estado_editar.value = item.id_estado_entregable
     nombre_estado.value = item.nombre_estado
     descripcion_estado.value = item.descripcion_estado
     color_estado.value = item.color_estado || 'blue'
@@ -142,9 +155,9 @@ const deleteEstado = async () => {
     isConnecting.value = true
 
     try {
-        await api.delete(`/api/estados/${id}`)
-        estados.value = estados.value.filter(e => e.id_estado !== id)
-        displayToast('Estado eliminado', 'success')
+    await api.delete(`/api/estadosentregable/${id}`)
+    estados.value = estados.value.filter(e => e.id_estado_entregable !== id)
+    displayToast('Estado eliminado', 'success')
     } catch (err) {
         console.error('Error eliminando:', err)
         displayToast('Error al eliminar estado', 'error')
@@ -219,14 +232,12 @@ const getColorClass = (colorName) => {
                         <tr class="bg-green-100 text-green-900">
                             <th class="px-4 py-2 text-left">Nombre del Estado</th>
                             <th class="px-4 py-2 text-left">Descripción</th>
-                            <th class="px-4 py-2 text-left">Vista Previa</th>
                             <th class="px-4 py-2 text-left">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="estado in estadosFiltrados" :key="estado.id_estado" class="border-b border-green-100 hover:bg-green-50 transition">
+                        <tr v-for="estado in estadosFiltrados" :key="estado.id_estado_entregable" class="border-b border-green-100 hover:bg-green-50 transition">
                             <td class="px-4 py-2 font-medium">{{ estado.nombre_estado }}</td>
-                            <td class="px-4 py-2 text-gray-600">{{ estado.descripcion_estado || '-' }}</td>
                             <td class="px-4 py-2">
                                 <span :class="['px-2 py-1 rounded-full text-xs font-bold border', getColorClass(estado.color_estado)]">
                                     {{ estado.nombre_estado }}
@@ -241,7 +252,7 @@ const getColorClass = (colorName) => {
                                     Editar
                                 </button>
                                 <button
-                                    @click="requestDelete(estado.id_estado)"
+                                    @click="requestDelete(estado.id_estado_entregable)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:delete" width="20" height="20" class="mr-2" />

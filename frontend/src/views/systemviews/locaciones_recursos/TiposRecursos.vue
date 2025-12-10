@@ -4,6 +4,7 @@ import Toast from '../../../components/Toast.vue'
 import { ref, onMounted } from 'vue'
 import api from '../../../services/api'
 import Confirmation from '../../../components/Confirmation.vue'
+import Modal from '../../../components/Modal.vue'
 
 const isConnecting = ref(false)
 const loadingTiposRecursos = ref(false)
@@ -12,8 +13,22 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
 
+const showEditModal = ref(false)
+const isUpdating = ref(false)
+const currentTipoRecurso = ref({
+    id_tipo_recurso: null,
+    nombre_tipo: ''
+})
+const editError = ref(false)
+
 const showConfirmation = ref(false)
 const tipoDeleteID = ref(null)
+
+const openEditModal = (tipo) => {
+    currentTipoRecurso.value = { ...tipo }
+    editError.value = false
+    showEditModal.value = true
+}
 
 const requestDeleteTipoRecurso = (id) => {
     tipoDeleteID.value = id
@@ -89,6 +104,37 @@ const deleteTiposRecursos = async () => {
     }
 }
 
+const updateTipoRecurso = async () => {
+    isUpdating.value = true
+    editError.value = false
+
+    try {
+        if (!currentTipoRecurso.value.nombre_tipo.trim()) {
+            editError.value = true
+            return
+        }
+        const id = currentTipoRecurso.value.id_tipo_recurso
+        const res = await api.put(`/api/tiposrecursos/${id}`, {
+            nombre_tipo: currentTipoRecurso.value.nombre_tipo
+        })
+        const index = tipos_recursos.value.findIndex(tipo => tipo.id_tipo_recurso === id)
+        if (index !== -1) {
+            tipos_recursos.value[index] = res.data
+        }
+        showEditModal.value = false
+        displayToast('Tipo de recurso actualizado', 'success')
+    } catch (err) {
+        console.error('Error al actualizar el tipo de recurso:', err)
+        let errorMensj = 'Error al actualizar. Inténtalo de nuevo.'
+        if (err.response?.status === 409) {
+            errorMensj = err.response.data.message
+        }
+        displayToast(errorMensj, 'error')
+    } finally {
+        isUpdating.value = false
+    }
+}
+
 onMounted(() => {
     getTiposRecursos()
 })
@@ -161,6 +207,7 @@ onMounted(() => {
                             <td class="px-4 py-2">{{ tipos.nombre_tipo }}</td>
                             <td class="px-4 py-2 flex items-center gap-1">
                                 <button
+                                    @click="openEditModal(tipos)"
                                     class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors"
                                 >
                                     <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" />
@@ -188,6 +235,12 @@ onMounted(() => {
             </div>
         </div>
 
+        <Toast
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
         <Confirmation
             :show="showConfirmation"
             title="Eliminar tipo recurso"
@@ -198,10 +251,39 @@ onMounted(() => {
             @cancel="showConfirmation = false"
         />
 
-        <Toast
-            v-model="showToast"
-            :message="toastMessage"
-            :type="toastType"
-        />
+        <Modal
+            v-if="showEditModal" :show="showEditModal" @close="showEditModal = false"
+            size="sm"
+            title="Editar Tipo de Recurso"
+        >
+            <div v-if="editError" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                <Icon icon="mdi:error" width="25" height="25" class="mr-2" />
+                El nombre del tipo de recurso no puede estar vacío.
+            </div>
+
+            <form @submit.prevent="updateTipoRecurso" class="mb-2">
+                <div class="mb-2">
+                    <div class="flex flex-col mb-2">
+                        <label for="nombre" class="text-sm font-semibold text-gray-500 mb-1">Nombre</label>
+                        <input
+                            type="text"
+                            v-model="currentTipoRecurso.nombre_tipo"
+                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="Nombre del tipo de recurso"
+                            required
+                        >
+                    </div>
+                </div>
+                <button 
+                    type="submit" 
+                    :disabled="isUpdating"
+                    class="w-full flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors disabled:bg-blue-300">
+                    {{ isUpdating ? 'Actualizando...' : 'Guardar Cambios' }}
+                </button>
+            </form>
+            <button @click="showEditModal = false" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors mt-2">
+                Cancelar
+            </button>
+        </Modal>
     </div>
 </template>

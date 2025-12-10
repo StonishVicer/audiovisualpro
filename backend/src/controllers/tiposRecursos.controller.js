@@ -62,3 +62,35 @@ export const deleteTipoRecurso = async (req, res) => {
         res.status(500).json({ message: 'Error al eliminar el tipo de recurso' })
     }
 }
+
+export const updateTipoRecurso = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { nombre_tipo } = req.body
+
+        const checkResult = await pool.query(
+            'SELECT COUNT(*) FROM recurso_tecnico WHERE id_tipo_recurso = $1',
+            [id]
+        )
+
+        const count = parseInt(checkResult.rows[0].count)
+
+        if (count > 0) {
+            return res.status(409).json({ message: `No se puede editar el tipo de recurso. Está asignada a ${count} recurso(s).` })
+        }
+
+        const result = await pool.query(
+            'UPDATE tipos_recurso SET nombre_tipo = $1 WHERE id_tipo_recurso = $2 RETURNING *',
+            [nombre_tipo, id]
+        )
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message : 'No se pudo encontrar el tipo de recurso' })
+        }
+
+        return res.json(result.rows[0])
+    } catch (err) {
+        console.error('Error al editar el tipo de recurso')
+        res.status(500).json({ message: 'Error al editar el tipo de recurso tecnico' })
+    }
+}

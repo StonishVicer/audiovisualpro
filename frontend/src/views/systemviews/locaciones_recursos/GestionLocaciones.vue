@@ -32,6 +32,7 @@
                         <td class="px-4 py-2">{{ locacion.descripcion_locacion }}</td>
                         <td class="px-4 py-2 flex items-center gap-1">
                             <button
+                                @click="openEditModal(locacion)"
                                 class="flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
                                 <Icon icon="material-symbols:edit" width="20" height="20" class="mr-2" /> Editar
                             </button>
@@ -112,6 +113,56 @@
             </button>
         </Modal>
 
+        <Modal
+            v-if="showEditModal" :show="showEditModal" @close="showEditModal = false"
+            size="sm"
+            title="Editar Locacion"
+        >
+            <div v-if="editError" class="flex text-[15px] font-semibold text-red-500 items-center justify-center w-full bg-red-100 border border-red-200 p-3 mx-3 rounded-xl shadow-md">
+                <Icon icon="mdi:error" width="25" heigth="25" class="mr-2" />
+                Complete todos los campos.
+            </div>
+
+            <form @submit.prevent="updateLocacion" class="mb-2"> <div class="mb-2">
+                    <div class="flex flex-col mb-2">
+                        <label for="nombre" class="text-sm font-semibold text-gray-500 mb-1">Nombre</label>
+                        <input
+                            type="text"
+                            v-model="currentLocacion.nombre_locacion" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            placeholder="Nombre"
+                        >
+                    </div>
+                    <div class="flex flex-col mb-2">
+                        <label for="direccion" class="text-sm font-semibold text-gray-500 mb-1">Dirección</label>
+                        <textarea
+                            v-model="currentLocacion.direccion" class="resize-none transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            placeholder="Direccion"
+                            rows="2"
+                        >
+                        </textarea>
+                    </div>
+                    <div class="flex flex-col mb-2">
+                        <label for="descripcion" class="text-sm font-semibold text-gray-500 mb-1">Descripción</label>
+                        <textarea
+                            v-model="currentLocacion.descripcion_locacion" class="resize-none transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            placeholder="Descripcion"
+                            rows="5"
+                        >
+                        </textarea>
+                    </div>
+                </div>
+                <button 
+                    type="submit" 
+                    :disabled="isUpdating"
+                    class="w-full flex items-center text-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors disabled:bg-blue-300">
+                    {{ isUpdating ? 'Actualizando...' : 'Guardar Cambios' }}
+                </button>
+            </form>
+            <button @click="showEditModal = false" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors mt-2">
+                Cancelar
+            </button>
+        </Modal>
+
         <Toast
             v-model="showToast"
             :message="toastMessage"
@@ -145,6 +196,16 @@ const isConnecting = ref(false)
 const loadingLocaciones = ref(false)
 const error = ref(false)
 
+const showEditModal = ref(false)
+const isUpdating = ref(false)
+const editError = ref(false)
+const currentLocacion = ref({
+    id_locacion: null,
+    nombre_locacion: '',
+    direccion: '',
+    descripcion_locacion: ''
+})
+
 const showConfirmation = ref(false)
 const locacionDeleteID = ref(null)
 
@@ -156,6 +217,12 @@ const descripcion_locacion = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
+
+const openEditModal = (locacion) => {
+    currentLocacion.value = { ...locacion }
+    editError.value = false
+    showEditModal.value = true
+}
 
 const displayToast = (message, type) => {
     toastMessage.value = message
@@ -169,6 +236,16 @@ const displayToast = (message, type) => {
 const requestDeleteLocacion = (id) => {
     locacionDeleteID.value = id
     showConfirmation.value = true
+}
+
+const validarFormularioEdicion = () => {
+    const { nombre, direccion_locacion, descripcion } = {
+        nombre: currentLocacion.value.nombre_locacion.trim(),
+        direccion_locacion: currentLocacion.value.direccion.trim(),
+        descripcion: currentLocacion.value.descripcion_locacion.trim()
+    }
+    if (!nombre || !direccion_locacion || !descripcion) return true
+    return false
 }
 
 const validarFormulario = () => {
@@ -249,6 +326,42 @@ const deleteLocaciones = async () => {
         }
     } finally {
         isConnecting.value = false
+    }
+}
+
+const updateLocacion = async () => {
+    isUpdating.value = true
+    editError.value = false
+
+    try {
+        if (validarFormularioEdicion()) {
+            editError.value = true
+            return
+        }
+
+        const res = await api.put(`/api/locacion/${currentLocacion.value.id_locacion}`, {
+            nombre_locacion: currentLocacion.value.nombre_locacion,
+            direccion: currentLocacion.value.direccion,
+            descripcion_locacion: currentLocacion.value.descripcion_locacion
+        })
+
+        const index = locaciones.value.findIndex(locacion => locacion.id_locacion === res.data.id_locacion)
+        if (index !== -1) {
+            locaciones.value[index] = res.data
+        }
+
+        console.log('Locacion actualizada con exito')
+        showEditModal.value = false
+        displayToast('Locacion actualizada', 'success')
+    } catch (err) {
+        console.error('Error al actualizar la locacion: ', err)
+        var errorMensj = 'Error al actualizar la locacion'
+        if (err.response?.status === 409) {
+            errorMensj = 'No se puede editar la locacion porque esta vinculada con proyecto(s)'
+        }
+        displayToast(errorMensj, 'error')
+    } finally {
+        isUpdating.value = false
     }
 }
 

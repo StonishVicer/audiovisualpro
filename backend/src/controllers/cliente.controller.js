@@ -58,3 +58,35 @@ export const deleteCliente = async (req, res) => {
         res.status(500).json({ message: 'Error al eliminar el cliente' })
     }
 }
+
+export const updateCliente = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { rif_cliente, nombre_cliente, email_cliente, telefono_cliente } = req.body
+
+        const checkResult = await pool.query(
+            'SELECT COUNT(*) FROM contratos WHERE id_cliente = $1',
+            [id]
+        )
+
+        const count = parseInt(checkResult.rows[0].count)
+
+        if (count > 0) {
+            return res.status(409).json({ message: 'No se puede editar al cliente, esta vinculado con un contrato.' })
+        }
+
+        const result = await pool.queyr(
+            'UPDATE clientes SET rif_cliente = $1, nombre_cliente = $2, email_cliente = $3, telefono_cliente = $4 WHERE id_cliente = $5 RETURNING *',
+            [rif_cliente, nombre_cliente, email_cliente, telefono_cliente, id]
+        )
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Cliente no encontrado' })
+        }
+
+        res.json(result.rows[0])
+    } catch (err) {
+        console.error('Error al editar al cliente: ', err)
+        res.status(500).json({ message: 'Error al editar al cliente' })
+    }
+}

@@ -75,3 +75,38 @@ export const deleteLocacion = async (req, res) => {
         res.status(500).json({ message: "Error al eliminar locacion" });
     }
 }
+
+export const updateLocacion = async (req, res) => {
+    const { id } = req.params;
+    const { nombre_locacion, direccion, descripcion_locacion } = req.body;
+
+    try {
+        const checkResult = await pool.query(
+            'SELECT COUNT(*) FROM proyecto_locaciones WHERE id_locacion = $1',
+            [id]
+        );
+
+        const count = parseInt(checkResult.rows[0].count);
+
+        if (count > 0) {
+            return res.status(409).json({
+                message: `No se puede editar la locación. Está asignada a ${count} proyecto(s).`
+            });
+        }
+
+        const result = await pool.query(
+            'UPDATE locaciones SET nombre_locacion = $1, direccion = $2, descripcion_locacion = $3 WHERE id_locacion = $4 RETURNING *',
+            [nombre_locacion, direccion, descripcion_locacion, id]
+        );
+        
+        if (result.rows.length === 0) {
+             return res.status(404).json({ message: "Locacion no encontrada" });
+        }
+
+        return res.json(result.rows[0]);
+
+    } catch (err) {
+        console.error('Error al editar la locacion: ', err);
+        res.status(500).json({ message: 'Error al editar la locacion' });
+    }
+}
