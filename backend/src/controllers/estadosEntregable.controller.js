@@ -10,15 +10,58 @@ export const getEstados = async (req, res) => {
 }
 
 export const createEstado = async (req, res) => {
-    const { nombre_estado } = req.body
+    const { nombre_estado, descripcion_estado, color_estado } = req.body
     try {
-        const result = await pool.query(
-            'INSERT INTO estados_entregable (nombre_estado) VALUES ($1) RETURNING *',
-            [nombre_estado]
-        )
-        res.json(result.rows[0])
+        console.log('POST /api/estadosentregable body:', req.body)
+        if (!nombre_estado || !nombre_estado.toString().trim()) {
+            return res.status(400).json({ message: 'El nombre del estado es obligatorio' })
+        }
+        // Intentamos insertar con las 3 columnas; si la tabla no las tiene, hacemos fallback
+        try {
+            const result = await pool.query(
+                'INSERT INTO estados_entregable (nombre_estado, descripcion_estado, color_estado) VALUES ($1, $2, $3) RETURNING *',
+                [nombre_estado, descripcion_estado || null, color_estado || null]
+            )
+            return res.status(201).json(result.rows[0])
+        } catch (innerErr) {
+            console.warn('Insert con 3 columnas falló, intentando solo nombre_estado:', innerErr.message)
+            // si el error es por columna inexistente o cualquier otro, intentar solo con nombre_estado
+            const result = await pool.query(
+                'INSERT INTO estados_entregable (nombre_estado) VALUES ($1) RETURNING *',
+                [nombre_estado]
+            )
+            return res.status(201).json(result.rows[0])
+        }
     } catch (err) {
-        res.status(500).json({ error: err.message })
+        console.error('Error creando estado entregable:', err)
+        return res.status(500).json({ message: err.message })
+    }
+}
+
+export const updateEstado = async (req, res) => {
+    const { id } = req.params
+    const { nombre_estado, descripcion_estado, color_estado } = req.body
+    try {
+        // Intentar actualizar con las 3 columnas; si falla (p.ej. columnas no existen), actualizar solo nombre_estado
+        try {
+            const result = await pool.query(
+                'UPDATE estados_entregable SET nombre_estado = $1, descripcion_estado = $2, color_estado = $3 WHERE id_estado_entregable = $4 RETURNING *',
+                [nombre_estado, descripcion_estado || null, color_estado || null, id]
+            )
+            if (result.rows.length === 0) return res.status(404).json({ message: 'Estado no encontrado' })
+            return res.json(result.rows[0])
+        } catch (innerErr) {
+            console.warn('Update con 3 columnas falló, intentando solo nombre_estado:', innerErr.message)
+            const result = await pool.query(
+                'UPDATE estados_entregable SET nombre_estado = $1 WHERE id_estado_entregable = $2 RETURNING *',
+                [nombre_estado, id]
+            )
+            if (result.rows.length === 0) return res.status(404).json({ message: 'Estado no encontrado' })
+            return res.json(result.rows[0])
+        }
+    } catch (err) {
+        console.error('Error actualizando estado entregable:', err)
+        return res.status(500).json({ message: err.message })
     }
 }
 

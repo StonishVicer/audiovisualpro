@@ -17,37 +17,46 @@ export const getEntregables = async (req, res) => {
     // 1. Consultamos la BD real
     const result = await pool.query('SELECT * FROM entregables ORDER BY id_entregable DESC')
 
-    // 2. "Desempaquetamos" la columna descripcion para sacar titulo y archivo
+    // Interpretamos la fila según el nuevo esquema:
+    // - `descripcion` ahora se usa como título breve
+    // - `link_entrega` guarda el link (o la URL del archivo subido)
+    // Para compatibilidad con registros antiguos que usaban "Titulo | URL" en descripcion,
+    // hacemos un fallback y parseamos si `link_entrega` es null.
     const entregables = result.rows.map(row => {
-      // La descripcion en BD es: "Titulo del archivo | URL"
-      // Usamos " | " como separador
-      const partes = row.descripcion ? row.descripcion.split(' | ') : ['Sin título']
-      
-      const tituloReal = partes[0]
-      const archivoData = partes[1] || null
-
-      let archivoObj = null
+      let tituloReal = row.descripcion || 'Sin título'
       let linkObj = null
+      let archivoObj = null
 
-      // Detectamos si lo que guardamos fue un Link HTTP o una ruta de archivo local
-      if (archivoData && archivoData.startsWith('http') && !archivoData.includes('localhost')) {
-        linkObj = archivoData // Es un link externo (Youtube, Drive, etc)
-      } else if (archivoData) {
-        // Es un archivo subido a nuestro server
-        archivoObj = { 
-          filename: 'Archivo Adjunto', 
-          url: archivoData 
+      // Preferimos `link_entrega` (columna nueva)
+      if (row.link_entrega) {
+        // Si el link parece una URL externa o una ruta absoluta, lo dejamos
+        linkObj = row.link_entrega
+        // Detectar si es URL local (subida) para presentar como archivo
+        if (row.link_entrega.includes('/uploads/') || row.link_entrega.includes('http://localhost')) {
+          archivoObj = { filename: 'Archivo Adjunto', url: row.link_entrega }
+          // Si es archivo, ocultamos el link directo y lo mostramos en `archivo`
+          linkObj = null
+        }
+      } else if (row.descripcion && row.descripcion.includes(' | ')) {
+        // Fallback para datos antiguos: "Titulo | URL"
+        const partes = row.descripcion.split(' | ')
+        tituloReal = partes[0] || tituloReal
+        const archivoData = partes[1] || null
+        if (archivoData) {
+          if (archivoData.startsWith('http') && !archivoData.includes('localhost')) {
+            linkObj = archivoData
+          } else {
+            archivoObj = { filename: 'Archivo Adjunto', url: archivoData }
+          }
         }
       }
 
-      // 3. Devolvemos el formato que espera tu Frontend (Vue)
       return {
-        id: row.id_entregable, // Tu front usa .id
+        id: row.id_entregable,
         titulo: tituloReal,
         link: linkObj,
         archivo: archivoObj,
         fecha_entrega: row.fecha_entrega_estimada,
-        // Enviamos el estado por si acaso
         id_estado_entregable: row.id_estado_entregable
       }
     })
@@ -62,7 +71,8 @@ export const getEntregables = async (req, res) => {
 // --- CREAR (INSERT) ---
 export const createEntregable = async (req, res) => {
   try {
-    const { titulo, link, fecha_entrega } = req.body
+    console.log('POST /api/entregables body:', req.body)
+    const { titulo, link, fecha_entrega, id_estado_entregable } = req.body
 
     // 1. Validaciones básicas
     if (!titulo) {
@@ -83,33 +93,53 @@ export const createEntregable = async (req, res) => {
       dataExtra = link
     }
 
-    // 3. EL TRUCO: Empaquetar "Titulo | URL" en la columna descripcion
-    // (Ya que no podemos crear columnas nuevas en la BD)
-    const descripcionCombinada = `${titulo} | ${dataExtra}`
+    // Guardamos `titulo` en `descripcion` (esta columna pasa a ser el título)
+    let descripcionToStore = titulo
+    if (!descripcionToStore) descripcionToStore = 'Sin título'
+    if (descripcionToStore.length > 255) {
+      console.warn(`Descripcion demasiado larga (${descripcionToStore.length} chars). Se truncará a 255.`)
+      descripcionToStore = descripcionToStore.slice(0, 252) + '...'
+    }
+
+    // Guardamos `dataExtra` (link o URL del archivo subido) en la columna `link_entrega`
 
     // 4. ID Proyecto Hardcodeado a 1
     // Tu BD obliga a tener un id_proyecto. Como el form no lo pide, ponemos 1.
     // ASEGURATE DE TENER UN PROYECTO CON ID 1 EN TU BD.
     const idProyecto = 1 
 
-    // 5. Insertar en PostgreSQL
-    const query = `
-      INSERT INTO entregables (id_proyecto, descripcion, fecha_entrega_estimada) 
-      VALUES ($1, $2, $3) 
-      RETURNING *
-    `
-    const values = [idProyecto, descripcionCombinada, fecha_entrega || null]
-    
-    const result = await pool.query(query, values)
+    // 5. Insertar en PostgreSQL: usamos la columna `link_entrega` y `id_estado_entregable`
+    // Construimos la consulta y valores
+    let result
+    try {
+      const query = `
+        INSERT INTO entregables (id_proyecto, descripcion, fecha_entrega_estimada, id_estado_entregable, link_entrega)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `
+      const values = [idProyecto, descripcionToStore, fecha_entrega || null, id_estado_entregable || null, dataExtra || null]
+      result = await pool.query(query, values)
+    } catch (innerErr) {
+      console.warn('Insert entregable con columnas nuevas falló, intentando fallback sin id_estado_entregable/link_entrega:', innerErr.message)
+      // Fallback: intentar insertar sin las columnas nuevas (compatibilidad)
+      const query = `
+        INSERT INTO entregables (id_proyecto, descripcion, fecha_entrega_estimada)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `
+      const values = [idProyecto, descripcionToStore, fecha_entrega || null]
+      result = await pool.query(query, values)
+    }
     const row = result.rows[0]
 
     // 6. Responder al frontend con el objeto creado
     const nuevoEntregable = {
       id: row.id_entregable,
-      titulo: titulo,
-      link: link || null,
+      titulo: row.descripcion || titulo,
+      link: row.link_entrega || (link || null),
       archivo: req.file ? { url: dataExtra, filename: req.file.filename } : null,
-      fecha_entrega: row.fecha_entrega_estimada
+      fecha_entrega: row.fecha_entrega_estimada,
+      id_estado_entregable: row.id_estado_entregable || id_estado_entregable || null
     }
 
     return res.status(201).json(nuevoEntregable)
@@ -128,9 +158,9 @@ export const createEntregable = async (req, res) => {
 export const updateEntregable = async (req, res) => {
   try {
     const id = req.params.id
-    const { titulo, link, fecha_entrega } = req.body
+    const { titulo, link, fecha_entrega, id_estado_entregable } = req.body
 
-    // 1. Lógica para determinar la nueva URL
+    // 1. Lógica para determinar la nueva URL (link_entrega)
     let dataExtra = ''
 
     if (req.file) {
@@ -146,17 +176,35 @@ export const updateEntregable = async (req, res) => {
         dataExtra = '' 
     }
 
-    // 2. Re-empaquetar descripcion
-    const descripcionCombinada = `${titulo} | ${dataExtra}`
+    // 2. Guardar titulo en `descripcion` y dataExtra en `link_entrega`
+    let descripcionToStore = titulo || ''
+    if (descripcionToStore.length > 255) {
+      console.warn(`Descripcion demasiado larga (${descripcionToStore.length} chars). Se truncará a 255.`)
+      descripcionToStore = descripcionToStore.slice(0, 252) + '...'
+    }
 
-    // 3. Actualizar en BD
-    const query = `
-        UPDATE entregables 
-        SET descripcion = $1, fecha_entrega_estimada = $2 
+    // 3. Actualizar en BD: escribir descripcion (titulo), link_entrega y id_estado_entregable
+    let result
+    try {
+      const query = `
+        UPDATE entregables
+        SET descripcion = $1, fecha_entrega_estimada = $2, id_estado_entregable = $3, link_entrega = $4
+        WHERE id_entregable = $5
+        RETURNING *
+      `
+      const values = [descripcionToStore, fecha_entrega || null, id_estado_entregable || null, dataExtra || null, id]
+      result = await pool.query(query, values)
+    } catch (innerErr) {
+      console.warn('Update entregable con columnas nuevas falló, intentando fallback sin id_estado_entregable/link_entrega:', innerErr.message)
+      const query = `
+        UPDATE entregables
+        SET descripcion = $1, fecha_entrega_estimada = $2
         WHERE id_entregable = $3
         RETURNING *
-    `
-    const result = await pool.query(query, [descripcionCombinada, fecha_entrega || null, id])
+      `
+      const values = [descripcionToStore, fecha_entrega || null, id]
+      result = await pool.query(query, values)
+    }
 
     if (result.rowCount === 0) {
         return res.status(404).json({ message: 'Entregable no encontrado' })
