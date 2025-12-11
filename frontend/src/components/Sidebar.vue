@@ -69,6 +69,7 @@ const menus = [
         submenu: [
             { name: 'Facturas', icon: 'uil:bill', route: '/system/facturas' },
             { name: 'Gastos', icon: 'lsicon:list-filled', route: '/system/gastos' },
+            { name: 'Categorias de Gastos', icon: "lsicon:list-filled", route: '/system/categoriasgasto' },
             { name: 'Pagos a Personal', icon: 'mdi:account-payment', route: '/system/pagospersonal' },
             { name: 'Reportes Financieros', icon: 'stash:billing-info-solid', route: '/system/reportesfinancieros' }
         ]
