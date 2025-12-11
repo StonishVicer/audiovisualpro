@@ -4,8 +4,8 @@
         <div class="border-b border-gray-200 pb-3 mb-4 flex items-center justify-between px-2">
             <h3 class="font-bold text-lg">Gestión de Personal</h3>
             <button
-                class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold px-3 py-2 rounded-lg transition-colors text-sm"
-                @click="abrirNuevoPersonal">
+                class="cursor-pointer flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold px-3 py-2 rounded-lg transition-colors text-sm"
+                @click="showModal = true">
                 <Icon icon="material-symbols:add" width="20" height="20" class="mr-1" /> Nuevo Personal
             </button>
         </div>
@@ -56,7 +56,7 @@
                         </button>
                         <button
                             class="flex items-center justify-center bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors gap-1 w-full"
-                            @click="eliminarPersonal(persona.idpersonal)">
+                            @click="requestDeletePersonal(persona.idpersonal)">
                             <Icon icon="material-symbols:delete" width="20" height="20" /> Eliminar
                         </button>
                     </div>
@@ -69,96 +69,102 @@
             </div>
         </div>
 
-        <!-- MODAL NUEVO / EDITAR PERSONAL -->
-        <div v-if="modalNuevoPersonal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
-            <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-lg relative">
-                <button class="absolute top-2 right-2 text-2xl font-bold text-gray-500"
-                    @click="modalNuevoPersonal = false">&times;</button>
-                <h4 class="font-bold text-lg mb-4 text-center">
-                    {{ esEdicion ? 'Editar Personal' : 'Nuevo Personal' }}
-                </h4>
-
-                <div v-if="roles.length === 0" class="mb-3 text-xs text-red-500 text-center font-semibold">
-                    Debes crear al menos un rol en "Roles de Personal" antes de registrar personal.
+        <Modal
+            v-if="showModalDetalles" :show="showModalDetalles" @close="showModalDetalles = false"
+            size="sm"
+            title="Detalles del Personal"
+        >
+            <div class="space-y-2">
+                <div>
+                    <span class="font-medium text-gray-600">ID:</span> {{ detallesActual.idpersonal }}
                 </div>
-
-                <form @submit.prevent="guardarPersonal">
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Nombre</label>
-                        <input v-model="nuevoPersonal.nombrepersonal" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Cédula</label>
-                        <input v-model="nuevoPersonal.cedulapersonal" required class="w-full border px-3 py-2 rounded"
-                            type="text" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Rol</label>
-                        <select v-model="nuevoPersonal.idrol" required class="w-full border px-3 py-2 rounded">
-                            <option disabled value="">Seleccione un rol</option>
-                            <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
-                                {{ rol.nombre_rol }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Salario</label>
-                        <input v-model="nuevoPersonal.salario" required class="w-full border px-3 py-2 rounded"
-                            type="number" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Correo</label>
-                        <input v-model="nuevoPersonal.emailpersonal" class="w-full border px-3 py-2 rounded"
-                            type="email" />
-                    </div>
-                    <div class="mb-4">
-                        <label class="block font-medium mb-1">Teléfono</label>
-                        <input v-model="nuevoPersonal.telefono" class="w-full border px-3 py-2 rounded" type="text" />
-                    </div>
-                    <div class="flex justify-end gap-2 mt-5">
-                        <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                            @click="modalNuevoPersonal = false">Cancelar</button>
-                        <button type="submit"
-                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- MODAL DETALLES -->
-        <div v-if="modalDetalles" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-8 w-full max-w-md shadow-lg relative">
-                <button class="absolute top-2 right-2 text-2xl font-bold text-gray-500"
-                    @click="modalDetalles = false">&times;</button>
-                <h4 class="font-bold text-lg mb-2 text-center">Detalles del Personal</h4>
-                <div class="space-y-2">
-                    <div>
-                        <span class="font-medium text-gray-600">ID:</span> {{ detallesActual.idpersonal }}
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-600">Nombre:</span> {{ detallesActual.nombrepersonal }}
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-600">Cédula:</span> {{ detallesActual.cedulapersonal }}
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-600">Rol (ID):</span>
-                        {{ detallesActual.rol }}
-                        <span v-if="detallesActual.idrol">({{ detallesActual.idrol }})</span>
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-600">Salario:</span> Bs. {{ detallesActual.salario }}
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-600">Correo:</span> {{ detallesActual.emailpersonal }}
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-600">Teléfono:</span> {{ detallesActual.telefono }}
-                    </div>
+                <div>
+                    <span class="font-medium text-gray-600">Nombre:</span> {{ detallesActual.nombrepersonal }}
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600">Cédula:</span> {{ detallesActual.cedulapersonal }}
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600">Rol (ID):</span>
+                    {{ detallesActual.rol }}
+                    <span v-if="detallesActual.idrol">({{ detallesActual.idrol }})</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600">Salario:</span> Bs. {{ detallesActual.salario }}
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600">Correo:</span> {{ detallesActual.emailpersonal }}
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600">Teléfono:</span> {{ detallesActual.telefono }}
                 </div>
             </div>
-        </div>
+        </Modal>
+
+        <Modal
+            v-if="showModal" :show="showModal" @close="showModal = false"
+            size="sm"
+            title="Nuevo Personal"
+        >
+            <form @submit.prevent="guardarPersonal" class="mb-2">
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Nombre</label>
+                    <input v-model="nuevoPersonal.nombrepersonal" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                        type="text" />
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Cédula</label>
+                    <input v-model="nuevoPersonal.cedulapersonal" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                        type="text" />
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Rol</label>
+                    <select v-model="nuevoPersonal.idrol" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <option disabled value="">Seleccione un rol</option>
+                        <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
+                            {{ rol.nombre_rol }}
+                        </option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Salario</label>
+                    <input v-model="nuevoPersonal.salario" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                        type="number" />
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Correo</label>
+                    <input v-model="nuevoPersonal.emailpersonal" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                        type="email" />
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Teléfono</label>
+                    <input v-model="nuevoPersonal.telefono" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" type="text" />
+                </div>
+
+                <button type="submit" class="w-full flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
+                    Crear Personal
+                </button>
+            </form>
+            <button @click="limpiarCampos" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
+                Limpiar campos
+            </button>
+        </Modal>
+
+        <Toast
+            v-model="showToast"
+            :message="toastMessage"
+            :type="toastType"
+        />
+
+        <Confirmation
+            :show="showConfirmation"
+            title="Eliminar personal"
+            message="¿Está seguro/a que desea eliminar este personal?"
+            confirm-text="Eliminar"
+            cancel-text="Cancelar"
+            @confirm="eliminarPersonal"
+            @cancel="showConfirmation = false"
+        />
     </div>
 </template>
 
@@ -166,6 +172,27 @@
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
+import Modal from '../../../components/Modal.vue'
+import Toast from '../../../components/Toast.vue'
+import Confirmation from '../../../components/Confirmation.vue'
+
+//Modal Creacion/Edicion
+const showModal = ref(false)
+const isConnecting = ref(false)
+const loadingPersonal = ref(false)
+const error = ref(false)
+
+//Confirmation
+const showConfirmation = ref(false)
+const personalDeleteID = ref(null)
+
+//Modal Detalles
+const showModalDetalles = ref(false)
+
+//Toast
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
 
 // Lista de personal
 const personal = ref([])
@@ -203,6 +230,22 @@ const nuevoPersonal = ref({
 
 const esEdicion = computed(() => personaEditandoId.value !== null)
 
+//Eliminar personal
+const requestDeletePersonal = (id) => {
+    personalDeleteID.value = id
+    showConfirmation.value = true
+}
+
+//Display toast
+const displayToast = (message, type) => {
+    toastMessage.value = message
+    toastType.value = type
+    showToast.value = true
+    setTimeout(() => {
+        showToast.value = false
+    }, 3000);
+}
+
 // Mapeo BD -> UI
 const mapBackendToLocal = (p) => ({
     idpersonal: p.id_personal,
@@ -214,6 +257,15 @@ const mapBackendToLocal = (p) => ({
     emailpersonal: p.email_personal,
     telefono: p.telefono
 })
+
+const limpiarCampos = () => {
+    nuevoPersonal.value.nombrepersonal = ''
+    nuevoPersonal.value.cedulapersonal = ''
+    nuevoPersonal.value.idrol = ''
+    nuevoPersonal.value.salario = ''
+    nuevoPersonal.value.emailpersonal = ''
+    nuevoPersonal.value.telefono = ''
+}
 
 // Cargar personal
 const getPersonal = async () => {
@@ -245,7 +297,7 @@ onMounted(() => {
 // Mostrar detalles
 const mostrarDetalles = (persona) => {
     detallesActual.value = { ...persona }
-    modalDetalles.value = true
+    showModalDetalles.value = true
 }
 
 // Abrir modal NUEVO
@@ -273,7 +325,7 @@ const editarPersonal = (persona) => {
         emailpersonal: persona.emailpersonal || '',
         telefono: persona.telefono || ''
     }
-    modalNuevoPersonal.value = true
+    showModal.value = true
 }
 
 // Guardar (crear o editar)
@@ -307,22 +359,31 @@ const guardarPersonal = async () => {
 
         modalNuevoPersonal.value = false
         personaEditandoId.value = null
+        limpiarCampos()
+        showModal.value = false
+        displayToast('Personal creado con exito', 'success')
     } catch (err) {
         console.error(err)
-        alert('No se pudo guardar el personal')
+        displayToast('No se pudo guardar el personal', 'error')
     }
 }
 
 // Eliminar
-const eliminarPersonal = async (idpersonal) => {
-    if (!confirm('¿Seguro que deseas eliminar este registro?')) return
+const eliminarPersonal = async () => {
+    const id = personalDeleteID.value
+    showConfirmation.value = false
+    if (!id) return;
+    isConnecting.value = true
 
     try {
-        await api.delete(`/api/personal/${idpersonal}`)
-        personal.value = personal.value.filter(p => p.idpersonal !== idpersonal)
+        await api.delete(`/api/personal/${id}`)
+        personal.value = personal.value.filter(p => p.idpersonal !== id)
+        displayToast('Personal eliminado con exito', 'success')
     } catch (err) {
         console.error(err)
-        alert('No se pudo eliminar el personal')
+        displayToast('No se pudo eliminar el personal', 'error')
+    } finally {
+        isConnecting.value = false
     }
 }
 </script>

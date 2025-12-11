@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 //MAIN VIEWS
 import MainView from '../views/MainView.vue'
+import LandingPage from '../views/LandingPage.vue'
 
 //SYSTEM VIEWS
 import SystemView from '../views/systemviews/SystemView.vue'
@@ -33,6 +34,12 @@ import NotFound from '../views/NotFound.vue' //NOT FOUND PAGE
 const routes = [
     {
         path: '/',
+        name: 'Landing Page',
+        component: LandingPage,
+        meta: { requiresGuest: true }
+    },
+    {
+        path: '/login',
         name: 'Main View',
         component: MainView,
         meta: { requiresGuest: true}

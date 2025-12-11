@@ -3,11 +3,6 @@
         <!-- HEADER CON BOTÓN SIEMPRE VISIBLE -->
         <div class="border-b border-gray-200 pb-3 mb-4 flex items-center justify-between px-2">
             <h3 class="font-bold text-lg">Asignación de Personal a Proyecto</h3>
-            <button
-                class="flex items-center bg-green-500 hover:bg-green-600 text-white font-semibold px-3 py-2 rounded-lg transition-colors text-sm"
-                @click="abrirNuevaAsignacion">
-                <Icon icon="material-symbols:add" width="20" height="20" class="mr-1" /> Nueva Asignación
-            </button>
         </div>
 
         <!-- LISTA DE ASIGNACIONES -->

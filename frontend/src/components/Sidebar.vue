@@ -83,7 +83,7 @@ const logout = () => {
     const confirmacion = confirm('Esta seguro/a que desea cerrar sesion?')
     if (confirmacion) {
         localStorage.removeItem('token')
-        router.push('/')
+        router.push('/login')
     }
 }
 </script>
