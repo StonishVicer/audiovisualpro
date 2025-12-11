@@ -50,7 +50,15 @@ const togglePasswordVisibility = () => {
     <div class="min-h-screen flex items-center justify-center bg-green-50 p-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
             <div class="w-full bg-white rounded-2xl shadow-lg p-8 border border-green-100">
-                <h1 class="text-center mb-4 font-bold text-green-600 text-xl">Inicio de Sesion</h1>
+                <div class="flex flex-col">
+                    <RouterLink to="/" class="flex items-center w-40 justify-center mb-2 p-1 text-sm bg-green-500 rounded-lg hover:bg-green-600 text-white font-semibold">
+                        Volver a la pagina
+                        <Icon icon="icon-park-solid:back" width="20" height="20" class="ml-2" />
+                    </RouterLink>
+                    <h1 class="text-center mb-4 font-bold text-green-600 text-xl">
+                        Inicio de Sesion
+                    </h1>
+                </div>
                 
                 <form @submit.prevent="handleLogin" class="space-y-4">
                     <div v-if="error" class="flex items-center justify-center text-[15px] font-semibold border border-red-200 bg-red-100 p-2 rounded-lg text-center text-red-500">
