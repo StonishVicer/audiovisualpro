@@ -24,6 +24,7 @@ import gastosRoutes from './routes/gasto.routes.js';
 import statsRoutes from './routes/stats.routes.js';
 import entregablesRoutes from './routes/entregables.routes.js';
 import estadosEntregableRoutes from './routes/estadosEntregable.routes.js';
+import categoriasGastoRoutes from './routes/categoriasGasto.routes.js'
 
 
 dotenv.config();
@@ -61,6 +62,7 @@ app.use('/api/gastos', gastosRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/entregables', entregablesRoutes)
 app.use('/api/estadosentregable', estadosEntregableRoutes)
+app.use('/api/categoriasgasto', categoriasGastoRoutes)
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
