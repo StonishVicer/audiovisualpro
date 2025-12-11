@@ -60,29 +60,6 @@ import { Icon } from '@iconify/vue'
         </div>
     </section>
 
-    <section id="contacto" class="py-16 md:py-24">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-2xl">
-            <h2 class="text-4xl font-bold text-center text-gray-700 mb-4">¿Listo para crear algo increíble?</h2>
-            <p class="text-center text-xl text-gray-500 mb-10">Cuéntanos sobre tu visión y te enviaremos una propuesta a medida.</p>
-
-            <form action="#" method="POST" class="space-y-6">
-                <div>
-                    <input type="text" placeholder="Tu Nombre" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none ring-2 focus:ring-green-400 resize-none ring-gray-300">
-                </div>
-                <div>
-                    <input type="email" placeholder="Tu Email Corporativo" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none ring-2 focus:ring-green-400 resize-none ring-gray-300">
-                </div>
-                <div>
-                    <textarea placeholder="Describe tu proyecto y presupuesto aproximado..." rows="5" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none ring-2 focus:ring-green-400 resize-none ring-gray-300"></textarea>
-                </div>
-                <button type="submit" class="w-full py-4 bg-green-500 cursor-pointer text-white text-lg font-bold rounded-lg shadow-2xl hover:bg-green-600 transition duration-300 transform hover:scale-[1.02]">
-                    Enviar Propuesta
-                </button>
-            </form>
-        </div>
-    </section>
-
-
     <footer class="bg-green-500 py-8">
         <div class="container font-semibold mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-white">
             <p>&copy; 2025 AudiovisualPro. Todos los derechos reservados.</p>

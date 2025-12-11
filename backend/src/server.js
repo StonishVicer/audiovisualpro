@@ -1,5 +1,3 @@
-// server.js (Versión Modificada con Socket.IO)
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -106,5 +104,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-    console.log(`Servidor (API + Sockets) corriendo en localhost:${PORT}`);
+    console.log(`Servidor corriendo en localhost:${PORT}`);
 });
