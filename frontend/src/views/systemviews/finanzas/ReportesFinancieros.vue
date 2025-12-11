@@ -15,15 +15,18 @@
         <button @click="refresh" class="flex items-center bg-gray-500 hover:bg-gray-600 text-white font-semibold p-2 rounded-lg">
           <Icon icon="material-symbols:refresh" width="20" height="20" />
         </button>
+        <button @click="creacionPDF" class="flex items-center bg-green-500 hover:bg-gray-600 text-white font-semibold p-2 rounded-lg">
+          <Icon icon="mingcute:pdf-fill" width="20" height="20" class="mr-2" />
+          Generar PDF
+        </button>
       </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-auto">
-      <!-- Gastos -->
       <section class="border border-gray-200 rounded-lg p-3 bg-white">
         <div class="flex justify-between items-center mb-3">
-          <h4 class="font-semibold">Gastos ({{ gastos.length }})</h4>
-          <div class="text-sm text-gray-600">Total: <strong>${{ totalGastos.toFixed(2) }}</strong></div>
+          <h4 class="font-semibold">Gastos ({{ filteredGastos.length }})</h4>
+          <div class="text-sm text-gray-600">Total: <strong>${{ totalGastosFiltrados.toFixed(2) }}</strong></div>
         </div>
 
         <div v-if="loadingGastos" class="text-center text-gray-600 py-6">Cargando gastos...</div>
@@ -52,11 +55,10 @@
         <div v-else class="text-center text-gray-600 py-6">No se encontraron gastos.</div>
       </section>
 
-      <!-- Pagos -->
       <section class="border border-gray-200 rounded-lg p-3 bg-white">
         <div class="flex justify-between items-center mb-3">
-          <h4 class="font-semibold">Pagos ({{ pagos.length }})</h4>
-          <div class="text-sm text-gray-600">Total: <strong>${{ totalPagos.toFixed(2) }}</strong></div>
+          <h4 class="font-semibold">Pagos ({{ filteredPagos.length }})</h4>
+          <div class="text-sm text-gray-600">Total: <strong>${{ totalPagosFiltrados.toFixed(2) }}</strong></div>
         </div>
 
         <div v-if="loadingPagos" class="text-center text-gray-600 py-6">Cargando pagos...</div>
@@ -92,12 +94,45 @@
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../../services/api.js'
+import { generateReportePDF, generateTestPDF } from '../../../utils/generatepdf.js' 
 
 const query = ref('')
 const gastos = ref([])
 const pagos = ref([])
 const loadingGastos = ref(false)
 const loadingPagos = ref(false)
+
+const totalGastosFiltrados = computed(() => 
+  filteredGastos.value.reduce((s, g) => s + Number(g.monto_gasto || 0), 0)
+)
+const totalPagosFiltrados = computed(() => 
+  filteredPagos.value.reduce((s, p) => s + Number(p.monto_pagado || 0), 0)
+)
+
+const creacionPDF = () => {
+  const mappedPagos = filteredPagos.value.map(p => ({
+      id: p.id_pago,
+      personal: p.personal?.nombre_personal ?? p.id_personal ?? '—',
+      asignacion: p.asignacion?.nombre_asignacion ?? p.id_asignacion ?? '—',
+      monto: Number(p.monto_pagado || 0),
+      fecha: formatDate(p.fecha_pago)
+  }));
+
+  const mappedGastos = filteredGastos.value.map(g => ({
+      id: g.id_gasto,
+      proyecto: g.proyecto?.nombre_proyecto ?? g.id_proyecto ?? '—',
+      descripcion: g.descripcion_gasto,
+      monto: Number(g.monto_gasto || 0),
+      fecha: formatDate(g.fecha_gasto)
+  }));
+  
+  generateReportePDF(
+    mappedPagos,
+    mappedGastos,
+    `$${totalPagosFiltrados.value.toFixed(2)}`,
+    `$${totalGastosFiltrados.value.toFixed(2)}`
+  );
+}
 
 const getGastos = async () => {
   loadingGastos.value = true
@@ -160,7 +195,7 @@ const refresh = () => {
 
 const formatDate = (d) => {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString()
+  return new Date(d).toLocaleDateString() 
 }
 
 onMounted(() => {
