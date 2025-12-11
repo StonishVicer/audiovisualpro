@@ -563,7 +563,8 @@ onMounted(() => {
                                 :estadoProyecto="proyecto.nombre_estado || proyecto.id_estado_proyecto"
                                 :fechaInicio="formatearFecha(proyecto.fecha_inicio)"
                                 :fechaFinEstimada="formatearFecha(proyecto.fecha_fin_estimada)"
-                                :presupuesto="proyecto.presupuesto" :locacionesAsignadas="proyecto.lista_locaciones"
+                                :presupuesto="proyecto.presupuesto"
+                                :locacionesAsignadas="proyecto.lista_locaciones"
                                 :recursosAsignados="proyecto.recursos_asignados"
                                 @verDetalles="abrirDetalles(proyecto)" />
                         </div>

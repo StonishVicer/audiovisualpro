@@ -13,8 +13,7 @@ const searchQuery = ref('')
 // --- Formulario ---
 const id_estado_editar = ref(null)
 const nombre_estado = ref('')
-const descripcion_estado = ref('')
-const color_estado = ref('blue') // Valor por defecto
+// ELIMINADAS: descripcion_estado y color_estado
 
 // --- UI States ---
 const showModal = ref(false)
@@ -29,15 +28,7 @@ const toastType = ref('success')
 const showConfirmation = ref(false)
 const deleteId = ref(null)
 
-// --- Opciones de Color para el Estado ---
-const coloresDisponibles = [
-    { value: 'gray', label: 'Gris (Inactivo)', class: 'bg-gray-500' },
-    { value: 'blue', label: 'Azul (Proceso)', class: 'bg-blue-500' },
-    { value: 'yellow', label: 'Amarillo (Alerta)', class: 'bg-yellow-500' },
-    { value: 'green', label: 'Verde (Éxito)', class: 'bg-green-500' },
-    { value: 'red', label: 'Rojo (Error)', class: 'bg-red-500' },
-    { value: 'purple', label: 'Morado (Especial)', class: 'bg-purple-500' },
-]
+// ELIMINADAS: Opciones de Color para el Estado (coloresDisponibles)
 
 // --- Utils ---
 const displayToast = (message, type) => {
@@ -49,8 +40,7 @@ const displayToast = (message, type) => {
 
 const limpiarCampos = () => {
     nombre_estado.value = ''
-    descripcion_estado.value = ''
-    color_estado.value = 'blue'
+    // ELIMINADAS: descripcion_estado, color_estado
     id_estado_editar.value = null
     error.value = false
 }
@@ -95,8 +85,7 @@ const handleSubmit = async () => {
 
         const payload = {
             nombre_estado: nombre_estado.value,
-            descripcion_estado: descripcion_estado.value,
-            color_estado: color_estado.value
+            // ELIMINADAS: descripcion_estado y color_estado
         }
 
         console.log('POST /api/estadosentregable payload:', payload)
@@ -105,6 +94,7 @@ const handleSubmit = async () => {
             // Editar (ruta de estados de entregable)
             const res = await api.put(`/api/estadosentregable/${id_estado_editar.value}`, payload)
             const idx = estados.value.findIndex(e => e.id_estado_entregable === id_estado_editar.value)
+            // Asume que la BD devuelve el estado completo, incluso si solo se actualizó el nombre.
             if (idx !== -1) estados.value[idx] = res.data
             displayToast('Estado actualizado', 'success')
         } else {
@@ -138,8 +128,7 @@ const handleSubmit = async () => {
 const openEditModal = (item) => {
     id_estado_editar.value = item.id_estado_entregable
     nombre_estado.value = item.nombre_estado
-    descripcion_estado.value = item.descripcion_estado
-    color_estado.value = item.color_estado || 'blue'
+    // ELIMINADAS: descripcion_estado y color_estado
     showModal.value = true
 }
 
@@ -170,18 +159,7 @@ onMounted(() => {
     getEstados()
 })
 
-// Función helper para traducir el string de color a clase de Tailwind
-const getColorClass = (colorName) => {
-    const map = {
-        'gray': 'bg-gray-100 text-gray-800 border-gray-200',
-        'blue': 'bg-blue-100 text-blue-800 border-blue-200',
-        'yellow': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        'green': 'bg-green-100 text-green-800 border-green-200',
-        'red': 'bg-red-100 text-red-800 border-red-200',
-        'purple': 'bg-purple-100 text-purple-800 border-purple-200',
-    }
-    return map[colorName] || map['gray']
-}
+// ELIMINADA: Función helper para traducir el string de color a clase de Tailwind (getColorClass)
 </script>
 
 <template>
@@ -231,17 +209,13 @@ const getColorClass = (colorName) => {
                     <thead>
                         <tr class="bg-green-100 text-green-900">
                             <th class="px-4 py-2 text-left">Nombre del Estado</th>
-                            <th class="px-4 py-2 text-left">Descripción</th>
                             <th class="px-4 py-2 text-left">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="estado in estadosFiltrados" :key="estado.id_estado_entregable" class="border-b border-green-100 hover:bg-green-50 transition">
-                            <td class="px-4 py-2 font-medium">{{ estado.nombre_estado }}</td>
-                            <td class="px-4 py-2">
-                                <span :class="['px-2 py-1 rounded-full text-xs font-bold border', getColorClass(estado.color_estado)]">
-                                    {{ estado.nombre_estado }}
-                                </span>
+                            <td class="px-4 py-2 font-medium">
+                                {{ estado.nombre_estado }}
                             </td>
                             <td class="px-4 py-2 flex items-center gap-2">
                                 <button
@@ -295,36 +269,6 @@ const getColorClass = (colorName) => {
                             class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
                             placeholder="Ej: En Revisión"
                         >
-                    </div>
-
-                    <div class="flex flex-col mb-3">
-                        <label class="text-sm font-semibold text-gray-500 mb-1">Descripción</label>
-                        <textarea
-                            v-model="descripcion_estado"
-                            rows="2"
-                            class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-                            placeholder="Descripción breve..."
-                        ></textarea>
-                    </div>
-
-                    <div class="flex flex-col mb-4">
-                        <label class="text-sm font-semibold text-gray-500 mb-2">Color del Indicador</label>
-                        <div class="flex gap-2 justify-center">
-                            <button
-                                v-for="color in coloresDisponibles"
-                                :key="color.value"
-                                type="button"
-                                @click="color_estado = color.value"
-                                :title="color.label"
-                                :class="[
-                                    color.class,
-                                    'w-8 h-8 rounded-full transition-transform hover:scale-110 focus:outline-none ring-2 ring-offset-2',
-                                    color_estado === color.value ? 'ring-gray-400 scale-110' : 'ring-transparent'
-                                ]"
-                            >
-                                <Icon v-if="color_estado === color.value" icon="mdi:check" class="text-white mx-auto" />
-                            </button>
-                        </div>
                     </div>
 
                     <div class="flex justify-end mt-4">
