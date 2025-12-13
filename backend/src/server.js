@@ -63,6 +63,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/entregables', entregablesRoutes)
 app.use('/api/estadosentregable', estadosEntregableRoutes)
 app.use('/api/categoriasgasto', categoriasGastoRoutes)
+app.use('/uploads', express.static('uploads'))
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
