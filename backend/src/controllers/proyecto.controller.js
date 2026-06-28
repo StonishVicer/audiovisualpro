@@ -94,3 +94,39 @@ export const desasignarRecurso = async (req, res) => {
         res.status(500).json({ message: 'Error al desasignar un recurso tecnico' })
     }
 }
+
+export const getAsignacionesProyecto = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { pool } = await import('../config/database.js')
+
+        const [locRes, recRes, persRes] = await Promise.all([
+            pool.query(
+                `SELECT l.id_locacion, l.nombre_locacion, l.direccion
+                 FROM proyecto_locaciones pl
+                 JOIN locaciones l ON pl.id_locacion = l.id_locacion
+                 WHERE pl.id_proyecto = $1`, [id]),
+            pool.query(
+                `SELECT r.id_recurso, r.nombre_equipo, tr.nombre_tipo, ur.fecha_inicio_uso, ur.fecha_fin_uso
+                 FROM uso_recurso ur
+                 JOIN recurso_tecnico r ON ur.id_recurso = r.id_recurso
+                 JOIN tipos_recurso tr ON r.id_tipo_recurso = tr.id_tipo_recurso
+                 WHERE ur.id_proyecto = $1`, [id]),
+            pool.query(
+                `SELECT ap.id_asignacion, ap.id_personal, p.nombre_personal, rp.nombre_rol, ap.horas_trabajadas
+                 FROM asignacion_personal ap
+                 JOIN personal p ON ap.id_personal = p.id_personal
+                 LEFT JOIN roles_personal rp ON p.id_rol = rp.id_rol
+                 WHERE ap.id_proyecto = $1`, [id])
+        ])
+
+        res.json({
+            locaciones: locRes.rows,
+            recursos: recRes.rows,
+            personal: persRes.rows
+        })
+    } catch (err) {
+        console.error('Error al obtener asignaciones del proyecto:', err)
+        res.status(500).json({ message: 'Error al obtener asignaciones' })
+    }
+}

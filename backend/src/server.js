@@ -28,6 +28,7 @@ import statsRoutes from './routes/stats.routes.js';
 import entregablesRoutes from './routes/entregables.routes.js';
 import estadosEntregableRoutes from './routes/estadosEntregable.routes.js';
 import categoriasGastoRoutes from './routes/categoriasGasto.routes.js';
+import proyectoCompleteRoutes from './routes/proyectoComplete.routes.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -68,6 +69,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/entregables', entregablesRoutes);
 app.use('/api/estadosentregable', estadosEntregableRoutes);
 app.use('/api/categoriasgasto', categoriasGastoRoutes);
+app.use('/api/proyectos/complete', proyectoCompleteRoutes);
 
 app.use(errorHandler);
 

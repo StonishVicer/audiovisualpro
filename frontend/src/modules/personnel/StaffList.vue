@@ -104,7 +104,7 @@
         <Modal
             :show="showModal" @close="showModal = false"
             size="sm"
-            title="Nuevo Personal"
+            :title="esEdicion ? 'Editar Personal' : 'Nuevo Personal'"
         >
             <form @submit.prevent="guardarPersonal" class="mb-2">
                 <div class="mb-4">
@@ -142,7 +142,7 @@
                 </div>
 
                 <button type="submit" class="w-full flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
-                    Crear Personal
+                    {{ esEdicion ? 'Guardar Cambios' : 'Crear Personal' }}
                 </button>
             </form>
             <button @click="limpiarCampos" class="w-full flex items-center text-center justify-center cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">

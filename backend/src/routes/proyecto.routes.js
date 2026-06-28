@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { getProyectoById, getProyectos, createProyecto, deleteProyecto, asignarLocacion, desasignarLocacion, asignarRecurso, desasignarRecurso } from "../controllers/proyecto.controller.js";
+import { getProyectoById, getProyectos, createProyecto, deleteProyecto, asignarLocacion, desasignarLocacion, asignarRecurso, desasignarRecurso, getAsignacionesProyecto } from "../controllers/proyecto.controller.js";
 
 const router = Router()
+router.get('/:id/asignaciones', getAsignacionesProyecto)
 router.get('/:id', getProyectoById)
 router.get('/', getProyectos)
 router.post('/', createProyecto)

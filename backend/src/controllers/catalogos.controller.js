@@ -62,6 +62,11 @@ export const updateRolPersonal = async (req, res) => {
     catch (e) { res.status(500).json({ message: e.message }) }
 }
 
+export const updateTipoProyecto = async (req, res) => {
+    try { const r = await TipoProyectoModel.update(req.params.id, req.body.nombre_tipo); r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'No encontrado' }) }
+    catch (e) { res.status(500).json({ message: e.message }) }
+}
+
 // Stats
 export const getFinanceStats = async (req, res) => {
     try { const r = await StatsModel.getFinanceStats(); res.json(r.rows[0]) }

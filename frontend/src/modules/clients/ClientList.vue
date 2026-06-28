@@ -121,32 +121,28 @@ const limpiarCampos = () => {
 
 // Nuevo: Prepara el formulario para editar
 const requestEditCliente = (cliente) => {
-    // 1. Establecer el ID del cliente a editar
     clienteEditandoId.value = cliente.id_cliente
     
-    // 2. Separar RIF/Cédula y Teléfono en código + número
     const rifMatch = cliente.rif_cliente.match(/^([VEJG])(\d+)$/)
     if (rifMatch) {
         codigoRif.value = rifMatch[1]
         rif_cliente.value = rifMatch[2]
         tipoDocumento.value = 'rif'
     } else {
-        // Es cédula (solo dígitos)
         rif_cliente.value = cliente.rif_cliente.replace(/[^0-9]/g, '')
         codigoRif.value = 'V'
         tipoDocumento.value = 'cedula'
     }
-    const [phoneCode, phoneNum] = cliente.telefono_cliente.match(/^(\d{4})(\d{7})$/)?.slice(1) || ['0414', cliente.telefono_cliente.slice(4)];
 
-    // 3. Cargar los datos en los v-model del formulario
+    const phoneParts = cliente.telefono_cliente.match(/^(\d{4})(\d{7})$/)
+    const phoneCode = phoneParts ? phoneParts[1] : '0414'
+    const phoneNum = phoneParts ? phoneParts[2] : (cliente.telefono_cliente ? cliente.telefono_cliente.slice(-7) : '')
+
     nombre_cliente.value = cliente.nombre_cliente
-    rif_cliente.value = rifNum
     email_cliente.value = cliente.email_cliente
     telefono_cliente.value = phoneNum
-    codigoRif.value = rifCode
     codigoTelefono.value = phoneCode
 
-    // 4. Abrir el modal
     showModal.value = true
 }
 
