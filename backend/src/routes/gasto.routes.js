@@ -1,18 +1,11 @@
-import { Router } from 'express';
-import { 
-    getGastos, 
-    getCategoriasGasto, 
-    createGasto, 
-    updateGasto, 
-    deleteGasto 
-} from '../controllers/gastoController.js';
+import { Router } from 'express'
+import { getGastos, getGastoById, createGasto, deleteGasto, updateGasto } from '../controllers/gastoController.js'
 
-const router = Router();
+const router = Router()
+router.get('/:id', getGastoById)
+router.get('/', getGastos)
+router.post('/', createGasto)
+router.put('/:id', updateGasto)
+router.delete('/:id', deleteGasto)
 
-router.get('/', getGastos);
-router.get('/categorias', getCategoriasGasto); // Ruta especial para el select
-router.post('/', createGasto);
-router.put('/:id', updateGasto);
-router.delete('/:id', deleteGasto);
-
-export default router;
+export default router

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getRecursoTecnicoById, getRecursosTecnicos, createRecursoTecnico, deleteRecursoTecnico, updateRecursoTecnico } from "../controllers/recursoTecnico.controller.js";
+import { getRecursoTecnicoById, getRecursosTecnicos, createRecursoTecnico, deleteRecursoTecnico, updateRecursoTecnico } from "../controllers/locacion.controller.js";
 
 const router = Router()
 router.get('/:id', getRecursoTecnicoById)

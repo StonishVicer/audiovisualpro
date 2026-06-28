@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { createTipoRecurso, getTiposRecurso, getTipoRecursoById, deleteTipoRecurso, updateTipoRecurso } from "../controllers/tiposRecursos.controller.js";
+import { getTiposRecursos, getTipoRecursoById, createTipoRecurso, deleteTipoRecurso, updateTipoRecurso } from "../controllers/locacion.controller.js";
 
 const router = Router()
-router.post('/', createTipoRecurso)
-router.get('/', getTiposRecurso)
+router.get('/', getTiposRecursos)
 router.get('/:id', getTipoRecursoById)
+router.post('/', createTipoRecurso)
 router.delete('/:id', deleteTipoRecurso)
 router.put('/:id', updateTipoRecurso)
 

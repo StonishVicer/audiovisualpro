@@ -1,10 +1,11 @@
-import { Router } from 'express'
-import { getEstadoProyectoById, getEstadosProyecto, createEstadoProyecto, deleteEstadoProyecto } from '../controllers/estadosProyecto.controller.js'
+import { Router } from "express";
+import { getEstadosProyecto, getEstadoProyectoById, createEstadoProyecto, deleteEstadoProyecto, updateEstadoProyecto } from "../controllers/catalogos.controller.js";
 
 const router = Router()
-router.post('/', createEstadoProyecto)
 router.get('/', getEstadosProyecto)
 router.get('/:id', getEstadoProyectoById)
+router.post('/', createEstadoProyecto)
 router.delete('/:id', deleteEstadoProyecto)
+router.put('/:id', updateEstadoProyecto)
 
 export default router

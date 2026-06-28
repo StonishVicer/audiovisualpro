@@ -117,7 +117,7 @@ const logout = () => {
                         class="relative group"
                     >
                         <RouterLink
-                            v-if="!menu.subname"
+                            v-if="!menu.submenu"
                             :to="menu.route"
                             class="flex items-center gap-3 p-2 rounded-lg hover:bg-green-500 hover:text-white transition"
                         >

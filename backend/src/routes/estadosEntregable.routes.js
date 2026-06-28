@@ -1,11 +1,11 @@
-import express from 'express'
-import { getEstados, createEstado, deleteEstado, updateEstado } from '../controllers/estadosEntregable.controller.js'
+import { Router } from "express";
+import { getEstadosEntregable, getEstadoEntregableById, createEstadoEntregable, deleteEstadoEntregable, updateEstadoEntregable } from "../controllers/entregables.controller.js";
 
-const router = express.Router()
-
-router.get('/', getEstados)
-router.post('/', createEstado)
-router.delete('/:id', deleteEstado)
-router.put('/:id', updateEstado)
+const router = Router()
+router.get('/', getEstadosEntregable)
+router.get('/:id', getEstadoEntregableById)
+router.post('/', createEstadoEntregable)
+router.delete('/:id', deleteEstadoEntregable)
+router.put('/:id', updateEstadoEntregable)
 
 export default router

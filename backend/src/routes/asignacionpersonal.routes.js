@@ -6,7 +6,7 @@ import {
     updateAsignacionPersonal,
     deleteAsignacionPersonal,
     getAsignacionesPorProyecto
-} from '../controllers/asignacionPersonal.controller.js'
+} from '../controllers/asignacionpersonal.controller.js'
 
 const router = Router()
 
