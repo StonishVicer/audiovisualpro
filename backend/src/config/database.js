@@ -15,7 +15,3 @@ export const pool = new Pool({
 pool.on('error', (err) => {
     logger.error('Error inesperado del pool de PostgreSQL', { error: err.message })
 })
-
-pool.on('connect', () => {
-    logger.info('Nueva conexión al pool de PostgreSQL')
-})

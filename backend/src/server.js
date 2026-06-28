@@ -11,9 +11,11 @@ import { config } from './config/env.js';
 import { logger } from './config/logger.js';
 import { verifyToken } from './middlewares/auth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { requestLogger } from './middlewares/requestLogger.js';
 import { setupChat } from './sockets/chat.js';
 
 import authRoutes from './routes/auth.routes.js';
+import healthRoutes from './routes/health.routes.js';
 import clienteRoutes from './routes/cliente.routes.js';
 import tiposProyectoRoutes from './routes/tiposProyecto.routes.js';
 import estadosProyectoRoutes from './routes/estadosProyecto.routes.js';
@@ -40,8 +42,19 @@ const __dirname = path.dirname(__filename);
 
 const httpServer = http.createServer(app);
 
+const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+    : ['http://localhost:5173', 'http://localhost'];
+
+const corsOptions = {
+    origin: corsOrigins,
+    credentials: true
+};
+
+app.use(cors(corsOptions));
+
 const io = new Server(httpServer, {
-    cors: { origin: ['http://localhost:5173', 'http://localhost'], methods: ['GET', 'POST'] }
+    cors: { origin: corsOrigins, methods: ['GET', 'POST'] }
 });
 
 const apiLimiter = rateLimit({
@@ -65,10 +78,10 @@ const swaggerOptions = {
         openapi: '3.0.0',
         info: {
             title: 'AudiovisualPro API',
-            version: '1.0.0',
+            version: '2.0.0',
             description: 'API para gestión de producción audiovisual'
         },
-        servers: [{ url: `http://localhost:${config.port}` }],
+        servers: [{ url: process.env.SERVER_URL || `http://localhost:${config.port}` }],
         components: {
             securitySchemes: {
                 bearerAuth: {
@@ -85,11 +98,13 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-app.use(cors());
+app.use(requestLogger);
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use('/health', healthRoutes);
 
 app.use('/api/auth', authLimiter, authRoutes);
 
@@ -123,4 +138,5 @@ setupChat(io);
 httpServer.listen(config.port, () => {
     logger.info(`Servidor corriendo en http://localhost:${config.port}`);
     logger.info(`Documentación Swagger en http://localhost:${config.port}/api-docs`);
+    logger.info(`Healthcheck en http://localhost:${config.port}/health`);
 });

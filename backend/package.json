@@ -26,14 +26,19 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branches": 30,
-        "functions": 30,
-        "lines": 30,
-        "statements": 30
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
       }
     }
   },
-  "keywords": ["api", "audiovisual", "production", "management"],
+  "keywords": [
+    "api",
+    "audiovisual",
+    "production",
+    "management"
+  ],
   "author": "StonishVicer",
   "license": "MIT",
   "type": "module",
@@ -45,6 +50,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.5.2",
     "express-validator": "^7.3.2",
+    "file-type": "^22.0.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "pg": "^8.16.3",

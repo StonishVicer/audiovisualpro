@@ -1,5 +1,7 @@
 import { EntregableModel, EstadoEntregableModel } from '../models/entregable.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
+import { pool } from '../config/database.js'
+import { logger } from '../config/logger.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -9,8 +11,20 @@ const deleteFile = (fileUrl) => {
         const filename = fileUrl.split('/').pop()
         if (!filename) return
         const filePath = path.join(path.resolve('uploads'), filename)
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-    } catch (err) { /* noop */ }
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath)
+            logger.debug('Archivo eliminado', { path: filePath })
+        }
+    } catch (err) {
+        logger.warn('Error al eliminar archivo', { error: err.message, fileUrl })
+    }
+}
+
+const buildFileUrl = (file) => {
+    if (!file) return null
+    const baseUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`
+    const relativePath = file.path.replace(/\\/g, '/')
+    return `${baseUrl}/${relativePath}`
 }
 
 export const EntregableService = {
@@ -35,13 +49,7 @@ export const EntregableService = {
     async create({ titulo, fecha_entrega, id_estado_entregable, id_proyecto, link, file }) {
         if (!titulo) throw new ValidationError('El título es obligatorio')
 
-        let dataExtra = ''
-        if (file) {
-            const PORT = process.env.PORT || 3000
-            dataExtra = `http://localhost:${PORT}/${file.path.replace(/\\/g, '/')}`
-        } else if (link) {
-            dataExtra = link
-        }
+        let dataExtra = file ? buildFileUrl(file) : (link || null)
 
         let desc = titulo
         if (desc.length > 255) desc = desc.slice(0, 252) + '...'
@@ -65,35 +73,83 @@ export const EntregableService = {
     },
 
     async update(id, { titulo, fecha_entrega, id_estado_entregable, id_proyecto, link, file }) {
-        const existing = await EntregableModel.findById(id)
-        if (existing.rows.length === 0) throw new NotFoundError('Entregable no encontrado')
+        const client = await pool.connect()
+        let newFileCreated = false
 
-        if (file && existing.rows[0].link_entrega) deleteFile(existing.rows[0].link_entrega)
+        try {
+            await client.query('BEGIN')
 
-        let dataExtra = file
-            ? `http://localhost:${process.env.PORT || 3000}/${file.path.replace(/\\/g, '/')}`
-            : (link !== undefined ? (link?.trim() || null) : existing.rows[0].link_entrega)
+            const existing = await EntregableModel.findById(id)
+            if (existing.rows.length === 0) {
+                await client.query('ROLLBACK')
+                throw new NotFoundError('Entregable no encontrado')
+            }
 
-        const desc = (titulo?.trim() || existing.rows[0].descripcion || 'Sin título').slice(0, 255)
-        const result = await EntregableModel.update(id, {
-            descripcion: desc,
-            fecha_entrega_estimada: fecha_entrega || existing.rows[0].fecha_entrega_estimada,
-            id_estado_entregable: id_estado_entregable || existing.rows[0].id_estado_entregable,
-            link_entrega: dataExtra,
-            id_proyecto: id_proyecto || existing.rows[0].id_proyecto
-        })
+            let dataExtra = existing.rows[0].link_entrega
 
-        return { message: 'Actualizado correctamente', entregable: result.rows[0] }
+            if (file) {
+                dataExtra = buildFileUrl(file)
+                newFileCreated = true
+                if (existing.rows[0].link_entrega) {
+                    deleteFile(existing.rows[0].link_entrega)
+                }
+            } else if (link !== undefined) {
+                dataExtra = link?.trim() || null
+            }
+
+            const desc = (titulo?.trim() || existing.rows[0].descripcion || 'Sin título').slice(0, 255)
+            const result = await client.query(
+                `UPDATE entregables SET descripcion=$1, fecha_entrega_estimada=$2, id_estado_entregable=$3, link_entrega=$4, id_proyecto=$5
+                 WHERE id_entregable=$6 RETURNING *`,
+                [
+                    desc,
+                    fecha_entrega || existing.rows[0].fecha_entrega_estimada,
+                    id_estado_entregable || existing.rows[0].id_estado_entregable,
+                    dataExtra,
+                    id_proyecto || existing.rows[0].id_proyecto,
+                    id
+                ]
+            )
+
+            await client.query('COMMIT')
+            return { message: 'Actualizado correctamente', entregable: result.rows[0] }
+
+        } catch (err) {
+            await client.query('ROLLBACK')
+            if (newFileCreated && file) {
+                deleteFile(buildFileUrl(file))
+            }
+            throw err
+        } finally {
+            client.release()
+        }
     },
 
     async remove(id) {
-        const existing = await EntregableModel.findById(id)
-        if (existing.rows.length === 0) throw new NotFoundError('Entregable no encontrado')
+        const client = await pool.connect()
+        try {
+            await client.query('BEGIN')
 
-        if (existing.rows[0].link_entrega) deleteFile(existing.rows[0].link_entrega)
-        await EntregableModel.remove(id)
+            const existing = await EntregableModel.findById(id)
+            if (existing.rows.length === 0) {
+                await client.query('ROLLBACK')
+                throw new NotFoundError('Entregable no encontrado')
+            }
 
-        return { message: 'Eliminado correctamente' }
+            if (existing.rows[0].link_entrega) {
+                deleteFile(existing.rows[0].link_entrega)
+            }
+
+            await EntregableModel.remove(id)
+            await client.query('COMMIT')
+
+            return { message: 'Eliminado correctamente' }
+        } catch (err) {
+            await client.query('ROLLBACK')
+            throw err
+        } finally {
+            client.release()
+        }
     }
 }
 

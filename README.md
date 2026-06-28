@@ -9,7 +9,7 @@
 
 Sistema web full-stack para gestionar proyectos de producción audiovisual. Frontend en **Vue 3** + **TailwindCSS**, backend en **Node.js** + **Express 5**, base de datos **PostgreSQL**. Incluye chat en tiempo real por proyecto, dashboard financiero, asignación de recursos, reportes PDF y autenticación JWT.
 
-> **v2.0 — Enterprise-Grade Refactor:** Clean Architecture con servicios, validación robusta, rate limiting, logging estructurado (Winston), manejo de errores unificado y documentación Swagger/OpenAPI.
+> **v2.1 — Enterprise-Grade Refinements:** Healthcheck con monitoreo de BD, CORS dinámico por entorno, request logging middleware, transacciones atómicas con rollback en entregables, validación de contenido de archivos, Swagger completo en todos los endpoints, pruebas de integración para servicios (+34 tests).
 
 ---
 
@@ -24,9 +24,12 @@ Sistema web full-stack para gestionar proyectos de producción audiovisual. Fron
 - Reportes PDF automáticos con jsPDF
 - CRUD completo para todas las entidades
 - Subida de archivos (imágenes, PDF, Word) con límite de 5 MB y validación MIME
-- Documentación API con Swagger (`/api-docs`)
+- Documentación API con Swagger (`/api-docs`) — 100% de endpoints documentados
+- Healthcheck endpoint (`/health`) con estado de BD y métricas de memoria
 - Rate limiting global (100 req/15min) y por login (10 req/15min)
-- Logging estructurado con Winston (archivos + consola)
+- Logging estructurado con Winston (archivos + consola + request logger)
+- CORS dinámico configurable por variable de entorno (`CORS_ORIGINS`)
+- Transacciones atómicas con rollback en operaciones multi-tabla
 - Soporte Docker para desarrollo y despliegue
 
 ---
@@ -245,7 +248,7 @@ Chat por proyecto con historial persistente en PostgreSQL.
 ## 🧪 Pruebas
 
 ```bash
-# Backend (Jest — 12 tests)
+# Backend (Jest — 34 tests: 13 unitarios + 21 integración)
 cd backend && pnpm test
 
 # Backend con cobertura

@@ -91,12 +91,14 @@ Catalog-like entities (types, states, roles) are consolidated for efficiency:
 | Feature | Implementation |
 |---------|---------------|
 | **Rate Limiting** | `express-rate-limit` — 100 req/15min (API), 10 req/15min (Login) |
+| **CORS** | Dinámico desde `CORS_ORIGINS` env var, con `credentials: true` |
 | **Input Validation** | `express-validator` — typed, sanitized, with custom error messages |
 | **Error Handling** | Unified via `AppError` hierarchy, caught by `errorHandler` middleware |
-| **Logging** | Winston — JSON logs to `logs/error.log` + `logs/combined.log`, console in dev |
+| **Logging** | Winston — JSON logs to `logs/error.log` + `logs/combined.log`, console in dev, request logger middleware |
 | **Auth** | JWT with `verifyToken` middleware on all `/api/*` routes |
-| **File Upload** | Multer — MIME filter, 5MB limit |
-| **API Docs** | Swagger UI at `/api-docs` (OpenAPI 3.0, auto-generated from route annotations) |
+| **File Upload** | Multer — MIME filter, 5MB limit, `file-type` content validation, atomic transactions with rollback |
+| **Healthcheck** | `GET /health` — verifies DB connectivity, reports uptime and memory usage |
+| **API Docs** | Swagger UI at `/api-docs` (OpenAPI 3.0, 100% endpoint coverage) |
 | **SQL Injection** | All queries parameterized (`$1`, `$2`, etc.) |
 
 ---
