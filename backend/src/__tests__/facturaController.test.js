@@ -1,53 +1,58 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals'
 
-const mockClient = { query: jest.fn(), release: jest.fn() };
-const mockPool = { query: jest.fn(), connect: jest.fn().mockResolvedValue(mockClient) };
+const mockGetAll = jest.fn()
+const mockCreate = jest.fn()
+const mockDelete = jest.fn()
 
-jest.unstable_mockModule('../config/database.js', () => ({ pool: mockPool }));
+jest.unstable_mockModule('../services/facturaService.js', () => ({
+    FacturaService: {
+        getAll: mockGetAll,
+        create: mockCreate,
+        delete: mockDelete
+    }
+}))
 
-const { getFacturas, createFactura, updateFactura, deleteFactura } = await import('../controllers/facturaController.js');
+const { getFacturas, createFactura, deleteFactura } = await import('../controllers/facturaController.js')
+
+import { NotFoundError } from '../utils/errors.js'
 
 describe('Factura Controller', () => {
-    let req, res;
+    let req, res, next
 
     beforeEach(() => {
-        req = { params: {}, body: {} };
-        res = { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis() };
-        jest.clearAllMocks();
-    });
+        jest.clearAllMocks()
+        res = { json: jest.fn(), status: jest.fn().mockReturnThis() }
+        next = jest.fn()
+    })
 
-    it('getFacturas debe retornar lista', async () => {
-        mockPool.query.mockResolvedValueOnce({ rows: [{ id_factura: 1, numero_factura: 'F-001' }] });
-        mockPool.query.mockResolvedValueOnce({ rows: [] });
-        await getFacturas(req, res);
-        const facturas = res.json.mock.calls[0][0];
-        expect(facturas).toHaveLength(1);
-        expect(facturas[0].items).toEqual([]);
-    });
+    it('getFacturas retorna lista con items', async () => {
+        req = {}
+        const mockFacturas = [{ id_factura: 1, items: [{ descripcion: 'item1' }] }]
+        mockGetAll.mockResolvedValue(mockFacturas)
+        await getFacturas(req, res, next)
+        expect(res.json).toHaveBeenCalledWith(mockFacturas)
+    })
 
-    it('createFactura debe crear con transacción', async () => {
-        req.body = { numero_factura: 'F-001', fecha_factura: '2026-01-15', cliente_id: '1', items: [{ descripcion: 'S', cantidad: 1, precio_unitario: 100 }], subtotal: '100', total: '100', estado: 'PAGADA' };
-        mockClient.query.mockImplementation((sql) => {
-            if (sql === 'BEGIN') return Promise.resolve();
-            if (sql === 'COMMIT') return Promise.resolve();
-            if (sql.includes('INSERT INTO facturas')) return Promise.resolve({ rows: [{ id_factura: 1 }] });
-            if (sql.includes('INSERT INTO factura_items')) return Promise.resolve({ rows: [{ id_item: 1 }] });
-            return Promise.resolve({ rows: [] });
-        });
-        await createFactura(req, res);
-        expect(res.status).toHaveBeenCalledWith(201);
-    });
+    it('createFactura crea una factura', async () => {
+        req = { body: { numero_factura: 'F001', cliente_id: 1, fecha_factura: '2025-01-01', items: [] } }
+        const mockFactura = { id_factura: 1, numero_factura: 'F001' }
+        mockCreate.mockResolvedValue(mockFactura)
+        await createFactura(req, res, next)
+        expect(res.status).toHaveBeenCalledWith(201)
+        expect(res.json).toHaveBeenCalledWith(mockFactura)
+    })
 
     it('deleteFactura debe eliminar', async () => {
-        req.params = { id: '1' };
-        mockClient.query.mockImplementation((sql) => {
-            if (sql === 'BEGIN') return Promise.resolve();
-            if (sql === 'COMMIT') return Promise.resolve();
-            if (sql.includes('DELETE FROM factura_items')) return Promise.resolve({ rows: [] });
-            if (sql.includes('DELETE FROM facturas')) return Promise.resolve({ rows: [{ id_factura: 1 }] });
-            return Promise.resolve({ rows: [] });
-        });
-        await deleteFactura(req, res);
-        expect(res.json).toHaveBeenCalledWith({ message: 'Eliminada correctamente' });
-    });
-});
+        req = { params: { id: '1' } }
+        mockDelete.mockResolvedValue({ message: 'Factura eliminada correctamente' })
+        await deleteFactura(req, res, next)
+        expect(res.json).toHaveBeenCalledWith({ message: 'Factura eliminada correctamente' })
+    })
+
+    it('deleteFactura llama next con NotFoundError si no existe', async () => {
+        req = { params: { id: '999' } }
+        mockDelete.mockRejectedValue(new NotFoundError('Factura no encontrada'))
+        await deleteFactura(req, res, next)
+        expect(next).toHaveBeenCalledWith(expect.any(NotFoundError))
+    })
+})

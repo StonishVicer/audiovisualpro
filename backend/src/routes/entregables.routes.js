@@ -27,6 +27,19 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } })
 
 const router = Router()
+
+/**
+ * @openapi
+ * /api/entregables:
+ *   get:
+ *     tags: [Entregables]
+ *     summary: Listar todos los entregables
+ *     responses: { 200: { description: Lista de entregables } }
+ *   post:
+ *     tags: [Entregables]
+ *     summary: Crear un entregable (multipart)
+ *     responses: { 201: { description: Entregable creado } }
+ */
 router.get('/', getEntregables)
 router.post('/', upload.single('archivo'), createEntregable)
 router.put('/:id', upload.single('archivo'), updateEntregable)

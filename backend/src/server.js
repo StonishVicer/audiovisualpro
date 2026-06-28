@@ -4,7 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
 import { Server } from 'socket.io';
+import rateLimit from 'express-rate-limit';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 import { config } from './config/env.js';
+import { logger } from './config/logger.js';
 import { verifyToken } from './middlewares/auth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { setupChat } from './sockets/chat.js';
@@ -37,20 +41,61 @@ const __dirname = path.dirname(__filename);
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
-    cors: { origin: 'http://localhost:5173', methods: ['GET', 'POST'] }
+    cors: { origin: ['http://localhost:5173', 'http://localhost'], methods: ['GET', 'POST'] }
 });
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Demasiadas peticiones, intente más tarde' }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Demasiados intentos de inicio de sesión, intente más tarde' }
+});
+
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'AudiovisualPro API',
+            version: '1.0.0',
+            description: 'API para gestión de producción audiovisual'
+        },
+        servers: [{ url: `http://localhost:${config.port}` }],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            }
+        },
+        security: [{ bearerAuth: [] }]
+    },
+    apis: ['./src/routes/*.js']
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Rutas públicas
-app.use('/api/auth', authRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Middleware de autenticación
+app.use('/api/auth', authLimiter, authRoutes);
+
+app.use('/api', apiLimiter);
 app.use('/api', verifyToken);
 
-// Rutas protegidas
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/tiposproyecto', tiposProyectoRoutes);
 app.use('/api/estadosproyecto', estadosProyectoRoutes);
@@ -76,5 +121,6 @@ app.use(errorHandler);
 setupChat(io);
 
 httpServer.listen(config.port, () => {
-    console.log(`Servidor corriendo en localhost:${config.port}`);
+    logger.info(`Servidor corriendo en http://localhost:${config.port}`);
+    logger.info(`Documentación Swagger en http://localhost:${config.port}/api-docs`);
 });

@@ -1,70 +1,106 @@
-import { LocacionModel, RecursoTecnicoModel, TipoRecursoModel } from '../models/locacion.js'
+import { LocacionService, RecursoTecnicoService, TipoRecursoService } from '../services/locacionService.js'
 
-export const getLocacionById = async (req, res) => {
-    try { const r = await LocacionModel.findById(req.params.id); r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'Locacion no encontrada' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const getLocaciones = async (req, res) => {
-    try { const r = await LocacionModel.findAll(); res.json(r.rows) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const createLocacion = async (req, res) => {
-    try { const r = await LocacionModel.create(req.body); res.status(201).json(r.rows[0]) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const deleteLocacion = async (req, res) => {
-    try { const r = await LocacionModel.remove(req.params.id); r.rows[0] ? res.json({ message: 'Eliminada' }) : res.status(404).json({ message: 'No encontrada' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const updateLocacion = async (req, res) => {
-    try { const r = await LocacionModel.update(req.params.id, req.body); r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'No encontrada' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-
-// Recursos Técnicos
-export const getRecursoTecnicoById = async (req, res) => {
-    try { const r = await RecursoTecnicoModel.findById(req.params.id); r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'No encontrado' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const getRecursosTecnicos = async (req, res) => {
-    try { const r = await RecursoTecnicoModel.findAll(); res.json(r.rows) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const createRecursoTecnico = async (req, res) => {
-    try { const r = await RecursoTecnicoModel.create(req.body); res.status(201).json(r.rows[0]) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const deleteRecursoTecnico = async (req, res) => {
-    try { const r = await RecursoTecnicoModel.remove(req.params.id); r.rows[0] ? res.json({ message: 'Eliminado' }) : res.status(404).json({ message: 'No encontrado' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-export const updateRecursoTecnico = async (req, res) => {
+export const getLocacionById = async (req, res, next) => {
     try {
-        const check = await RecursoTecnicoModel.hasUsos(req.params.id)
-        if (parseInt(check.rows[0].count) > 0) return res.status(409).json({ message: 'Vinculado a proyecto' })
-        const r = await RecursoTecnicoModel.update(req.params.id, req.body)
-        r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'No encontrado' })
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const locacion = await LocacionService.findById(req.params.id)
+        res.json(locacion)
+    } catch (err) { next(err) }
 }
 
-// Tipos de Recursos
-export const getTiposRecursos = async (req, res) => {
-    try { const r = await TipoRecursoModel.findAll(); res.json(r.rows) }
-    catch (e) { res.status(500).json({ message: e.message }) }
+export const getLocaciones = async (req, res, next) => {
+    try {
+        const locaciones = await LocacionService.findAll()
+        res.json(locaciones)
+    } catch (err) { next(err) }
 }
-export const getTipoRecursoById = async (req, res) => {
-    try { const r = await TipoRecursoModel.findById(req.params.id); r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'No encontrado' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
+
+export const createLocacion = async (req, res, next) => {
+    try {
+        const locacion = await LocacionService.create(req.body)
+        res.status(201).json(locacion)
+    } catch (err) { next(err) }
 }
-export const createTipoRecurso = async (req, res) => {
-    try { const r = await TipoRecursoModel.create(req.body.nombre_tipo); res.status(201).json(r.rows[0]) }
-    catch (e) { res.status(500).json({ message: e.message }) }
+
+export const deleteLocacion = async (req, res, next) => {
+    try {
+        const result = await LocacionService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
 }
-export const deleteTipoRecurso = async (req, res) => {
-    try { const r = await TipoRecursoModel.remove(req.params.id); r.rows[0] ? res.json({ message: 'Eliminado' }) : res.status(404).json({ message: 'No encontrado' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
+
+export const updateLocacion = async (req, res, next) => {
+    try {
+        const locacion = await LocacionService.update(req.params.id, req.body)
+        res.json(locacion)
+    } catch (err) { next(err) }
 }
-export const updateTipoRecurso = async (req, res) => {
-    try { const r = await TipoRecursoModel.update(req.params.id, req.body.nombre_tipo); r.rows[0] ? res.json(r.rows[0]) : res.status(404).json({ message: 'No encontrado' }) }
-    catch (e) { res.status(500).json({ message: e.message }) }
+
+export const getRecursoTecnicoById = async (req, res, next) => {
+    try {
+        const recurso = await RecursoTecnicoService.findById(req.params.id)
+        res.json(recurso)
+    } catch (err) { next(err) }
+}
+
+export const getRecursosTecnicos = async (req, res, next) => {
+    try {
+        const recursos = await RecursoTecnicoService.findAll()
+        res.json(recursos)
+    } catch (err) { next(err) }
+}
+
+export const createRecursoTecnico = async (req, res, next) => {
+    try {
+        const recurso = await RecursoTecnicoService.create(req.body)
+        res.status(201).json(recurso)
+    } catch (err) { next(err) }
+}
+
+export const deleteRecursoTecnico = async (req, res, next) => {
+    try {
+        const result = await RecursoTecnicoService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
+}
+
+export const updateRecursoTecnico = async (req, res, next) => {
+    try {
+        const recurso = await RecursoTecnicoService.update(req.params.id, req.body)
+        res.json(recurso)
+    } catch (err) { next(err) }
+}
+
+export const getTiposRecursos = async (req, res, next) => {
+    try {
+        const tipos = await TipoRecursoService.findAll()
+        res.json(tipos)
+    } catch (err) { next(err) }
+}
+
+export const getTipoRecursoById = async (req, res, next) => {
+    try {
+        const tipo = await TipoRecursoService.findById(req.params.id)
+        res.json(tipo)
+    } catch (err) { next(err) }
+}
+
+export const createTipoRecurso = async (req, res, next) => {
+    try {
+        const tipo = await TipoRecursoService.create(req.body.nombre_tipo)
+        res.status(201).json(tipo)
+    } catch (err) { next(err) }
+}
+
+export const deleteTipoRecurso = async (req, res, next) => {
+    try {
+        const result = await TipoRecursoService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
+}
+
+export const updateTipoRecurso = async (req, res, next) => {
+    try {
+        const tipo = await TipoRecursoService.update(req.params.id, req.body.nombre_tipo)
+        res.json(tipo)
+    } catch (err) { next(err) }
 }

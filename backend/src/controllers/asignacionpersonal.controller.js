@@ -1,63 +1,43 @@
-import { PersonalModel, AsignacionModel } from '../models/personal.js'
+import { AsignacionService } from '../services/personalService.js'
 
-export const getAsignacionesPersonal = async (req, res) => {
+export const getAsignacionesPersonal = async (req, res, next) => {
     try {
-        const result = await AsignacionModel.findAll()
-        res.json(result.rows)
-    } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
+        const asignaciones = await AsignacionService.findAll()
+        res.json(asignaciones)
+    } catch (err) { next(err) }
 }
 
-export const getAsignacionPersonalById = async (req, res) => {
+export const getAsignacionPersonalById = async (req, res, next) => {
     try {
-        const result = await AsignacionModel.findById(req.params.id)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Asignacion no encontrada' })
-        res.json(result.rows[0])
-    } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
+        const asignacion = await AsignacionService.findById(req.params.id)
+        res.json(asignacion)
+    } catch (err) { next(err) }
 }
 
-export const getAsignacionesPorProyecto = async (req, res) => {
+export const getAsignacionesPorProyecto = async (req, res, next) => {
     try {
-        const result = await AsignacionModel.findByProyecto(req.params.idProyecto)
-        res.json(result.rows)
-    } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
+        const asignaciones = await AsignacionService.findByProyecto(req.params.idProyecto)
+        res.json(asignaciones)
+    } catch (err) { next(err) }
 }
 
-export const createAsignacionPersonal = async (req, res) => {
+export const createAsignacionPersonal = async (req, res, next) => {
     try {
-        const { id_proyecto, id_personal, horas_trabajadas } = req.body
-        const result = await AsignacionModel.create({
-            id_proyecto, id_personal,
-            horas_trabajadas: horas_trabajadas || 0,
-            fecha_registro: new Date().toISOString().slice(0, 10)
-        })
-        res.status(201).json(result.rows[0])
-    } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
+        const asignacion = await AsignacionService.create(req.body)
+        res.status(201).json(asignacion)
+    } catch (err) { next(err) }
 }
 
-export const updateAsignacionPersonal = async (req, res) => {
+export const updateAsignacionPersonal = async (req, res, next) => {
     try {
-        const result = await AsignacionModel.update(req.params.id, req.body)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Asignacion no encontrada' })
-        res.json(result.rows[0])
-    } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
+        const asignacion = await AsignacionService.update(req.params.id, req.body)
+        res.json(asignacion)
+    } catch (err) { next(err) }
 }
 
-export const deleteAsignacionPersonal = async (req, res) => {
+export const deleteAsignacionPersonal = async (req, res, next) => {
     try {
-        const result = await AsignacionModel.remove(req.params.id)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Asignacion no encontrada' })
-        res.json({ message: 'Asignacion eliminada' })
-    } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
+        const result = await AsignacionService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
 }

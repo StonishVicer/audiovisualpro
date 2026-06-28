@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken'
-import dotenv from 'dotenv'
+import { config } from '../config/env.js'
 
-dotenv.config()
-const SECRET = process.env.JWT_SECRET
+const SECRET = config.jwt.secret
 
 export const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization

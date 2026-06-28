@@ -1,70 +1,71 @@
-import { GastoModel, PagoModel } from '../models/gasto.js'
+import { GastoService, PagoService } from '../services/gastoService.js'
 
-export const getGastos = async (req, res) => {
-    try { const r = await GastoModel.findAll(); res.json(r.rows) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-
-export const getGastoById = async (req, res) => {
+export const getGastos = async (req, res, next) => {
     try {
-        const r = await GastoModel.findById(req.params.id)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Gasto no encontrado' })
-        res.json(r.rows[0])
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const gastos = await GastoService.findAll()
+        res.json(gastos)
+    } catch (err) { next(err) }
 }
 
-export const createGasto = async (req, res) => {
-    try { const r = await GastoModel.create(req.body); res.status(201).json(r.rows[0]) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-
-export const deleteGasto = async (req, res) => {
+export const getGastoById = async (req, res, next) => {
     try {
-        const r = await GastoModel.remove(req.params.id)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Gasto no encontrado' })
-        res.json({ message: 'Gasto eliminado' })
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const gasto = await GastoService.findById(req.params.id)
+        res.json(gasto)
+    } catch (err) { next(err) }
 }
 
-export const updateGasto = async (req, res) => {
+export const createGasto = async (req, res, next) => {
     try {
-        const r = await GastoModel.update(req.params.id, req.body)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Gasto no encontrado' })
-        res.json(r.rows[0])
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const gasto = await GastoService.create(req.body)
+        res.status(201).json(gasto)
+    } catch (err) { next(err) }
 }
 
-// Pagos
-export const getPagos = async (req, res) => {
-    try { const r = await PagoModel.findAll(); res.json(r.rows) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-
-export const getPagoById = async (req, res) => {
+export const deleteGasto = async (req, res, next) => {
     try {
-        const r = await PagoModel.findById(req.params.id)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Pago no encontrado' })
-        res.json(r.rows[0])
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const result = await GastoService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
 }
 
-export const createPago = async (req, res) => {
-    try { const r = await PagoModel.create(req.body); res.status(201).json(r.rows[0]) }
-    catch (e) { res.status(500).json({ message: e.message }) }
-}
-
-export const deletePago = async (req, res) => {
+export const updateGasto = async (req, res, next) => {
     try {
-        const r = await PagoModel.remove(req.params.id)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Pago no encontrado' })
-        res.json({ message: 'Pago eliminado' })
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const gasto = await GastoService.update(req.params.id, req.body)
+        res.json(gasto)
+    } catch (err) { next(err) }
 }
 
-export const updatePago = async (req, res) => {
+export const getPagos = async (req, res, next) => {
     try {
-        const r = await PagoModel.update(req.params.id, req.body)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Pago no encontrado' })
-        res.json(r.rows[0])
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const pagos = await PagoService.findAll()
+        res.json(pagos)
+    } catch (err) { next(err) }
+}
+
+export const getPagoById = async (req, res, next) => {
+    try {
+        const pago = await PagoService.findById(req.params.id)
+        res.json(pago)
+    } catch (err) { next(err) }
+}
+
+export const createPago = async (req, res, next) => {
+    try {
+        const pago = await PagoService.create(req.body)
+        res.status(201).json(pago)
+    } catch (err) { next(err) }
+}
+
+export const deletePago = async (req, res, next) => {
+    try {
+        const result = await PagoService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
+}
+
+export const updatePago = async (req, res, next) => {
+    try {
+        const pago = await PagoService.update(req.params.id, req.body)
+        res.json(pago)
+    } catch (err) { next(err) }
 }

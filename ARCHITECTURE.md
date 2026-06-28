@@ -2,7 +2,7 @@
 
 ## Overview
 
-AudiovisualPro follows a **layered architecture** with clear separation of concerns:
+AudiovisualPro follows a **clean layered architecture** with strict separation of concerns:
 
 ```
 📁 raíz (config global)
@@ -13,52 +13,91 @@ AudiovisualPro follows a **layered architecture** with clear separation of conce
 
 ---
 
-## Backend Architecture (Layered)
+## Backend Architecture (Clean Layered)
 
 ```
 backend/src/
-├── config/          → env.js (dotenv), database.js (pool)
-├── models/          → Data access layer (SQL queries)
-├── services/        → Business logic orchestration
-├── controllers/     → Request/response handling
-├── routes/          → Route definitions + middleware
-├── middlewares/     → auth.js, errorHandler.js, multerConfig.js
-├── sockets/         → Socket.io event handlers
-└── server.js        → Entry point (Express + Socket.io setup)
+├── config/          → env.js (dotenv), database.js (pool), logger.js (Winston)
+├── models/          → Data access layer (SQL queries only)
+├── services/        → Business logic, transactions, validation
+├── controllers/     → Request/response handling (thin, delegates to services)
+├── routes/          → Route definitions + validation middleware
+├── middlewares/     → auth.js, errorHandler.js, validators.js, multerConfig.js
+├── sockets/         → Socket.io event handlers (delegates to services)
+├── utils/           → Custom error classes (AppError, NotFoundError, etc.)
+└── server.js        → Entry point (Express + Socket.io + Rate Limiting + Swagger)
 ```
 
 ### Layer Responsibilities
 
-| Layer | File | Responsibility |
-|-------|------|----------------|
-| **Config** | `config/env.js` | Loads `.env` from project root, exports normalized config object |
-| **Config** | `config/database.js` | Creates and exports PostgreSQL connection pool |
-| **Models** | `models/proyecto.js`, etc. | Pure data access — all SQL lives here. Exports objects with `findAll()`, `create()`, `remove()`, etc. |
-| **Services** | `services/facturaService.js`, etc. | Business logic, transactions, orchestration. Calls models. |
-| **Controllers** | `controllers/proyecto.controller.js`, etc. | Validates input, calls services/models, sends HTTP response. **No SQL.** |
-| **Routes** | `routes/proyecto.routes.js`, etc. | Defines HTTP methods and paths, applies middleware. |
-| **Sockets** | `sockets/chat.js` | `setupChat(io)` — registers Socket.io events, calls models for persistence. |
-| **Middlewares** | `middlewares/auth.js` | `verifyToken` — JWT validation for all `/api/*` routes. |
+| Layer | Responsibility |
+|-------|---------------|
+| **Config** | Loads `.env`, creates DB pool, configures Winston logger |
+| **Models** | Pure data access — all SQL lives here. Exports objects with `findAll()`, `create()`, `remove()`, etc. |
+| **Services** | Business logic, transactions, orchestration. Calls models. Throws custom errors (`AppError` subclasses). |
+| **Controllers** | Validates input via middleware, calls services, sends HTTP response. **No SQL or business logic.** Delegates errors via `next(err)`. |
+| **Routes** | Defines HTTP methods/paths, applies validation middleware (`express-validator`). |
+| **Sockets** | `setupChat(io)` — registers Socket.io events, delegates to `ChatService`. |
+| **Middlewares** | `verifyToken` (JWT), `errorHandler` (unified error response), `validators` (express-validator chains), `multerConfig`. |
+| **Utils** | Custom error hierarchy: `AppError` → `NotFoundError`, `ValidationError`, `ConflictError`, `UnauthorizedError`. |
 
 ### Data Flow
 
 ```
 HTTP Request
-  → Route (matches URL, applies auth middleware)
-    → Controller (validates req.body, calls service/model)
-      → Service/Model (executes SQL via pool.query)
-        → PostgreSQL
-      ← Returns data
-    ← Formats JSON response
+  → Rate Limiter (express-rate-limit)
+    → Route (matches URL, applies auth middleware)
+      → Validator Middleware (express-validator)
+        → Controller (delegates to service)
+          → Service (business logic, calls model)
+            → Model (executes SQL via pool.query)
+              → PostgreSQL
+          ← Returns data
+        ← Throws AppError on failure
+      ← Formats JSON response
+    → Error Handler (catches thrown errors, logs with Winston)
   ← HTTP Response
 ```
 
+### Service Layer (v2.0)
+
+Every entity has a dedicated service:
+
+| Service | File | Entities |
+|---------|------|----------|
+| ProyectoService | `services/proyectoService.js` | Proyecto CRUD, Asignaciones, ProyectoComplete |
+| ClienteService | `services/clienteService.js` | Cliente CRUD |
+| PersonalService | `services/personalService.js` | Personal + Asignaciones CRUD |
+| LocacionService | `services/locacionService.js` | Locaciones + Recursos Técnicos + Tipos |
+| ContratoService | `services/contratoService.js` | Contratos CRUD |
+| FacturaService | `services/facturaService.js` | Facturas + Items (transaccional) |
+| GastoService | `services/gastoService.js` | Gastos + Pagos + Categorías CRUD |
+| EntregableService | `services/entregableService.js` | Entregables + Estados CRUD |
+| CatalogoService | `services/catalogoService.js` | Tipos Proyecto, Estados, Roles, Stats |
+| ChatService | `services/chatService.js` | Chat messages persistence |
+| AuthService | `services/authService.js` | Login, JWT generation |
+
 ### Route Consolidation
 
-Catalog-like entities (types, states, roles) are consolidated into fewer files:
-- `controllers/catalogos.controller.js` handles tipos_proyecto, estados_proyecto, roles_personal, stats
-- `controllers/locacion.controller.js` handles locaciones, recursos_tecnicos, tipos_recurso
-- `controllers/gastoController.js` handles gastos and pagos_personal
+Catalog-like entities (types, states, roles) are consolidated for efficiency:
+- `controllers/catalogos.controller.js` → `CatalogoService`
+- `controllers/locacion.controller.js` → `LocacionService` / `RecursoTecnicoService` / `TipoRecursoService`
+- `controllers/gastoController.js` → `GastoService` / `PagoService`
+
+---
+
+## Security & Observability
+
+| Feature | Implementation |
+|---------|---------------|
+| **Rate Limiting** | `express-rate-limit` — 100 req/15min (API), 10 req/15min (Login) |
+| **Input Validation** | `express-validator` — typed, sanitized, with custom error messages |
+| **Error Handling** | Unified via `AppError` hierarchy, caught by `errorHandler` middleware |
+| **Logging** | Winston — JSON logs to `logs/error.log` + `logs/combined.log`, console in dev |
+| **Auth** | JWT with `verifyToken` middleware on all `/api/*` routes |
+| **File Upload** | Multer — MIME filter, 5MB limit |
+| **API Docs** | Swagger UI at `/api-docs` (OpenAPI 3.0, auto-generated from route annotations) |
+| **SQL Injection** | All queries parameterized (`$1`, `$2`, etc.) |
 
 ---
 
@@ -82,13 +121,6 @@ frontend/src/
 └── utils/           → generatepdf.js
 ```
 
-### Module Conventions
-
-- Each module groups related views together
-- Views import shared components from `../../components/`
-- Views import services from `../../services/`
-- Routes in `router/router.js` pull from modules
-
 ---
 
 ## Environment Configuration
@@ -98,6 +130,7 @@ frontend/src/
 | `.env` (root) | Actual environment variables (gitignored) |
 | `.env.example` (root) | Template for new developers |
 | `backend/src/config/env.js` | Loads `.env` from project root, validates and exports config |
+| `backend/src/config/logger.js` | Winston logger with file + console transports |
 
 `.env` is at project **root** so it works for both Docker Compose and local development.
 
@@ -115,10 +148,14 @@ frontend/src/
 
 ## Key Design Decisions
 
-1. **Dotenv at root**: Single source of truth, works with Docker and local dev
-2. **Single .gitignore**: Avoids scattered ignore rules
-3. **Layered backend**: Models → Services → Controllers → Routes ensures each layer can be tested independently
-4. **Module-based frontend**: Features are grouped by domain, not by file type
-5. **Consolidated controllers**: Reduces file count for simple CRUD entities
-6. **Socket.io separation**: `sockets/chat.js` is independently testable
-7. **Token interceptor**: Frontend `api.js` auto-attaches JWT from localStorage
+1. **Clean Layered Architecture**: Models → Services → Controllers → Routes ensures each layer can be tested independently
+2. **Services as single source of business logic**: Every controller delegates to a service; no SQL or validation in controllers
+3. **Custom Error Hierarchy**: `AppError` subclasses enable precise HTTP status codes and operational-vs-programmer error distinction
+4. **Unified Error Handler**: All thrown errors flow to `errorHandler` middleware; controllers never call `res.status(500)`
+5. **Dotenv at root**: Single source of truth, works with Docker and local dev
+6. **Structured Logging**: Winston replaces `console.log` — JSON logs for production, colorized for development
+7. **Input Validation**: `express-validator` chains applied at route level before controllers
+8. **Rate Limiting**: Global API limiter + stricter auth limiter to prevent brute force
+9. **Module-based frontend**: Features are grouped by domain, not by file type
+10. **Socket.io separation**: `sockets/chat.js` delegates all persistence to `ChatService`
+11. **Token interceptor**: Frontend `api.js` auto-attaches JWT from localStorage

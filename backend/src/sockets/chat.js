@@ -1,45 +1,38 @@
-import { pool } from '../config/database.js'
+import { ChatService } from '../services/chatService.js'
+import { logger } from '../config/logger.js'
 
 export function setupChat(io) {
-    const rooms = {}
-
     io.on('connection', (socket) => {
-        console.log(`Socket conectado: ${socket.id}`)
+        logger.info(`Socket conectado: ${socket.id}`)
 
         socket.on('join_room', async ({ roomId, userId, userType }) => {
             socket.join(roomId)
-            rooms[socket.id] = { roomId, userId, userType }
-            console.log(`${userType} ${userId} se unió a sala ${roomId}`)
+            logger.info(`${userType} ${userId} se unió a sala ${roomId}`)
 
             try {
-                const result = await pool.query(
-                    'SELECT * FROM chat_messages WHERE id_room = $1 ORDER BY timestamp DESC LIMIT 50',
-                    [parseInt(roomId)]
-                )
-                socket.emit('chat_history', result.rows.reverse())
+                const messages = await ChatService.getMessages(parseInt(roomId))
+                socket.emit('chat_history', messages)
             } catch (err) {
-                console.error('Error cargando historial:', err.message)
+                logger.error('Error cargando historial de chat', { error: err.message, roomId })
             }
         })
 
         socket.on('send_message', async ({ roomId, message, senderType, senderId }) => {
             try {
-                const result = await pool.query(
-                    `INSERT INTO chat_messages (id_room, sender_type, sender_id, mensaje)
-                     VALUES ($1, $2, $3, $4) RETURNING *`,
-                    [parseInt(roomId), senderType, parseInt(senderId), message]
-                )
-                io.to(roomId).emit('new_message', result.rows[0])
+                const saved = await ChatService.saveMessage({
+                    roomId: parseInt(roomId),
+                    senderType,
+                    senderId: parseInt(senderId),
+                    message
+                })
+                io.to(roomId).emit('new_message', saved)
             } catch (err) {
-                console.error('Error guardando mensaje:', err.message)
+                logger.error('Error guardando mensaje', { error: err.message, roomId })
             }
         })
 
         socket.on('disconnect', () => {
-            if (rooms[socket.id]) {
-                console.log(`Socket ${rooms[socket.id].userId} desconectado`)
-                delete rooms[socket.id]
-            }
+            logger.info(`Socket ${socket.id} desconectado`)
         })
     })
 }

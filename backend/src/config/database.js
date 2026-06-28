@@ -1,5 +1,6 @@
 import pkg from 'pg'
 import { config } from './env.js'
+import { logger } from './logger.js'
 
 const { Pool } = pkg
 
@@ -9,4 +10,12 @@ export const pool = new Pool({
     password: config.db.password,
     database: config.db.database,
     port: config.db.port
+})
+
+pool.on('error', (err) => {
+    logger.error('Error inesperado del pool de PostgreSQL', { error: err.message })
+})
+
+pool.on('connect', () => {
+    logger.info('Nueva conexión al pool de PostgreSQL')
 })

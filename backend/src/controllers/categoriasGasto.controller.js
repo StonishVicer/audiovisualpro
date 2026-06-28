@@ -1,55 +1,36 @@
-import { CategoriaGastoModel } from '../models/gasto.js'
+import { CategoriaGastoService } from '../services/gastoService.js'
 
-export const getCategoriaGastoByID = async (req, res) => {
+export const getCategoriaGastoByID = async (req, res, next) => {
     try {
-        const result = await CategoriaGastoModel.findById(req.params.id)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Categoria de gasto no encontrada' })
-        res.json(result.rows[0])
-    } catch (err) {
-        res.status(500).json({ message: 'Error al cargar la categoria de gasto por ID: ' + err.message })
-    }
+        const categoria = await CategoriaGastoService.findById(req.params.id)
+        res.json(categoria)
+    } catch (err) { next(err) }
 }
 
-export const getCategoriaGasto = async (req, res) => {
+export const getCategoriaGasto = async (req, res, next) => {
     try {
-        const result = await CategoriaGastoModel.findAll()
-        res.json(result.rows)
-    } catch (err) {
-        res.status(500).json({ message: 'Error al cargar las categorias de gastos: ' + err.message })
-    }
+        const categorias = await CategoriaGastoService.findAll()
+        res.json(categorias)
+    } catch (err) { next(err) }
 }
 
-export const createCategoriaGasto = async (req, res) => {
+export const createCategoriaGasto = async (req, res, next) => {
     try {
-        if (!req.body.nombre_categoria) return res.status(400).json({ message: 'Falta un campo obligatorio' })
-        const result = await CategoriaGastoModel.create(req.body.nombre_categoria)
-        res.status(201).json(result.rows[0])
-    } catch (err) {
-        res.status(500).json({ message: 'Error al crear la categoria de gasto: ' + err.message })
-    }
+        const categoria = await CategoriaGastoService.create(req.body.nombre_categoria)
+        res.status(201).json(categoria)
+    } catch (err) { next(err) }
 }
 
-export const deleteCategoriaGasto = async (req, res) => {
+export const deleteCategoriaGasto = async (req, res, next) => {
     try {
-        const result = await CategoriaGastoModel.remove(req.params.id)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Categoria de gasto no encontrada' })
-        res.json({ message: 'Categoria de gasto eliminada con exito' })
-    } catch (err) {
-        res.status(500).json({ message: 'Error al eliminar las categorias de gastos: ' + err.message })
-    }
+        const result = await CategoriaGastoService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
 }
 
-export const editCategoriaGasto = async (req, res) => {
+export const editCategoriaGasto = async (req, res, next) => {
     try {
-        const { id } = req.params
-        const checkResult = await CategoriaGastoModel.hasGastos(id)
-        if (parseInt(checkResult.rows[0].count) > 0) {
-            return res.status(409).json({ message: 'No se puede eliminar la categoria de gasto porque esta vinculada con un gasto' })
-        }
-        const result = await CategoriaGastoModel.update(id, req.body.nombre_categoria)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Categoria de gasto no encontrada' })
-        res.json(result.rows[0])
-    } catch (err) {
-        res.status(500).json({ message: 'Error al actualizar la categoria de gasto: ' + err.message })
-    }
+        const categoria = await CategoriaGastoService.update(req.params.id, req.body.nombre_categoria)
+        res.json(categoria)
+    } catch (err) { next(err) }
 }

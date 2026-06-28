@@ -1,57 +1,36 @@
-import { ContratoModel } from '../models/contrato.js'
+import { ContratoService } from '../services/contratoService.js'
 
-export const getContratoById = async (req, res) => {
+export const getContratoById = async (req, res, next) => {
     try {
-        const { rows } = await ContratoModel.findById(req.params.id)
-        if (rows.length === 0) return res.status(404).json({ message: 'Contrato no encontrado' })
-        res.json(rows[0])
-    } catch (err) {
-        console.error(err)
-        res.status(500).json({ message: 'Error al obtener el contrato' })
-    }
+        const contrato = await ContratoService.findById(req.params.id)
+        res.json(contrato)
+    } catch (err) { next(err) }
 }
 
-export const getContratos = async (req, res) => {
+export const getContratos = async (req, res, next) => {
     try {
-        const { rows } = await ContratoModel.findAll()
-        res.json(rows)
-    } catch (err) {
-        res.status(500).json({ message: 'Error al obtener contratos' })
-    }
+        const contratos = await ContratoService.findAll()
+        res.json(contratos)
+    } catch (err) { next(err) }
 }
 
-export const createContrato = async (req, res) => {
+export const createContrato = async (req, res, next) => {
     try {
-        const { id_proyecto, id_cliente, fecha_firma, monto_contrato, descripcion_servicios } = req.body
-        if (!id_proyecto || !id_cliente || !fecha_firma || !monto_contrato) {
-            return res.status(400).json({ message: 'Faltan campos obligatorios' })
-        }
-        const { rows } = await ContratoModel.create({ id_proyecto, id_cliente, fecha_firma, monto_contrato, descripcion_servicios })
-        res.status(201).json(rows[0])
-    } catch (err) {
-        console.error(err)
-        res.status(500).json({ message: 'Error al crear contrato' })
-    }
+        const contrato = await ContratoService.create(req.body)
+        res.status(201).json(contrato)
+    } catch (err) { next(err) }
 }
 
-export const updateContrato = async (req, res) => {
+export const updateContrato = async (req, res, next) => {
     try {
-        const { rows } = await ContratoModel.update(req.params.id, req.body)
-        if (rows.length === 0) return res.status(404).json({ message: 'Contrato no encontrado' })
-        res.json(rows[0])
-    } catch (err) {
-        console.error(err)
-        res.status(500).json({ message: 'Error al actualizar contrato' })
-    }
+        const contrato = await ContratoService.update(req.params.id, req.body)
+        res.json(contrato)
+    } catch (err) { next(err) }
 }
 
-export const deleteContrato = async (req, res) => {
+export const deleteContrato = async (req, res, next) => {
     try {
-        const { rows } = await ContratoModel.remove(req.params.id)
-        if (rows.length === 0) return res.status(404).json({ message: 'Contrato no encontrado' })
-        res.json({ message: 'Contrato eliminado correctamente' })
-    } catch (err) {
-        console.error(err)
-        res.status(500).json({ message: 'Error al eliminar contrato' })
-    }
+        const result = await ContratoService.remove(req.params.id)
+        res.json(result)
+    } catch (err) { next(err) }
 }

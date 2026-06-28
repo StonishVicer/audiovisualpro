@@ -1,12 +1,13 @@
 {
   "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "AudiovisualPro - Backend API",
+  "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles --coverage",
     "migrate": "node -e \"const {Pool}=require('pg');const p=new Pool();const fs=require('fs');p.query(fs.readFileSync('../BD/migracion_final.sql','utf8')).then(()=>{console.log('Migracion completada');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})\""
   },
   "jest": {
@@ -16,11 +17,25 @@
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
-    "injectGlobals": false
+    "injectGlobals": false,
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/server.js",
+      "!src/config/env.js",
+      "!src/config/logger.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 30,
+        "functions": 30,
+        "lines": 30,
+        "statements": 30
+      }
+    }
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["api", "audiovisual", "production", "management"],
+  "author": "StonishVicer",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.21.0+sha512.da3337267e400fdd3d479a6c68079ac6db01d8ca4f67572083e722775a796788a7a9956613749e000fac20d424b594f7a791a5f4e2e13581c5ef947f26968a40",
   "dependencies": {
@@ -28,11 +43,16 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "pg": "^8.16.3",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

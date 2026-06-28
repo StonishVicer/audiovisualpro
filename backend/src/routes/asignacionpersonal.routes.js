@@ -1,31 +1,14 @@
 import { Router } from 'express'
-import {
-    getAsignacionesPersonal,
-    getAsignacionPersonalById,
-    createAsignacionPersonal,
-    updateAsignacionPersonal,
-    deleteAsignacionPersonal,
-    getAsignacionesPorProyecto
-} from '../controllers/asignacionpersonal.controller.js'
+import { getAsignacionesPersonal, getAsignacionPersonalById, createAsignacionPersonal, updateAsignacionPersonal, deleteAsignacionPersonal, getAsignacionesPorProyecto } from '../controllers/asignacionpersonal.controller.js'
+import { validateAsignacionPersonal, validateIdParam } from '../middlewares/validators.js'
 
 const router = Router()
 
-// GET /api/asignaciones
 router.get('/', getAsignacionesPersonal)
-
-// GET /api/asignaciones/proyecto/:idProyecto
 router.get('/proyecto/:idProyecto', getAsignacionesPorProyecto)
-
-// GET /api/asignaciones/:id
-router.get('/:id', getAsignacionPersonalById)
-
-// POST /api/asignaciones
-router.post('/', createAsignacionPersonal)
-
-// PUT /api/asignaciones/:id
-router.put('/:id', updateAsignacionPersonal)
-
-// DELETE /api/asignaciones/:id
-router.delete('/:id', deleteAsignacionPersonal)
+router.get('/:id', validateIdParam, getAsignacionPersonalById)
+router.post('/', validateAsignacionPersonal, createAsignacionPersonal)
+router.put('/:id', validateIdParam, updateAsignacionPersonal)
+router.delete('/:id', validateIdParam, deleteAsignacionPersonal)
 
 export default router

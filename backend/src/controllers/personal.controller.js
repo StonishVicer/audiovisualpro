@@ -1,42 +1,46 @@
-import { PersonalModel } from '../models/personal.js'
+import { PersonalService } from '../services/personalService.js'
 
-export const getPersonalById = async (req, res) => {
+export const getPersonalById = async (req, res, next) => {
     try {
-        const r = await PersonalModel.findById(req.params.id)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Personal no encontrado' })
-        res.json(r.rows[0])
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const personal = await PersonalService.findById(req.params.id)
+        res.json(personal)
+    } catch (err) {
+        next(err)
+    }
 }
 
-export const getPersonal = async (req, res) => {
+export const getPersonal = async (req, res, next) => {
     try {
-        const r = await PersonalModel.findAll()
-        res.json(r.rows)
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const personal = await PersonalService.findAll()
+        res.json(personal)
+    } catch (err) {
+        next(err)
+    }
 }
 
-export const createPersonal = async (req, res) => {
+export const createPersonal = async (req, res, next) => {
     try {
-        const r = await PersonalModel.create(req.body)
-        res.status(201).json(r.rows[0])
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const personal = await PersonalService.create(req.body)
+        res.status(201).json(personal)
+    } catch (err) {
+        next(err)
+    }
 }
 
-export const deletePersonal = async (req, res) => {
+export const deletePersonal = async (req, res, next) => {
     try {
-        const r = await PersonalModel.remove(req.params.id)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Personal no encontrado' })
-        res.json({ message: 'Personal eliminado' })
-    } catch (e) { res.status(500).json({ message: e.message }) }
+        const result = await PersonalService.remove(req.params.id)
+        res.json(result)
+    } catch (err) {
+        next(err)
+    }
 }
 
-export const updatePersonal = async (req, res) => {
+export const updatePersonal = async (req, res, next) => {
     try {
-        const r = await PersonalModel.update(req.params.id, req.body)
-        if (r.rows.length === 0) return res.status(404).json({ message: 'Personal no encontrado' })
-        res.json(r.rows[0])
-    } catch (e) {
-        console.error(e)
-        res.status(500).json({ message: e.message })
+        const personal = await PersonalService.update(req.params.id, req.body)
+        res.json(personal)
+    } catch (err) {
+        next(err)
     }
 }

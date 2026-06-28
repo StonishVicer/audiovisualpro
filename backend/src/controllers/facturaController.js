@@ -1,42 +1,37 @@
 import { FacturaService } from '../services/facturaService.js'
 
-export const getFacturas = async (req, res) => {
+export const getFacturas = async (req, res, next) => {
     try {
         const facturas = await FacturaService.getAll()
         res.json(facturas)
     } catch (err) {
-        console.error(err)
-        res.status(500).json({ message: 'Error al obtener las facturas' })
+        next(err)
     }
 }
 
-export const createFactura = async (req, res) => {
+export const createFactura = async (req, res, next) => {
     try {
         const factura = await FacturaService.create(req.body)
         res.status(201).json(factura)
     } catch (err) {
-        console.error('Error Create Factura:', err)
-        res.status(500).json({ message: 'Error al crear la factura', error: err.message })
+        next(err)
     }
 }
 
-export const updateFactura = async (req, res) => {
+export const updateFactura = async (req, res, next) => {
     try {
-        const result = await FacturaService.update(req.params.id, req.body)
-        if (!result) return res.status(404).json({ message: 'Factura no encontrada' })
-        res.json({ message: 'Actualizado', factura: result })
+        const factura = await FacturaService.update(req.params.id, req.body)
+        res.json({ message: 'Actualizado', factura })
     } catch (err) {
-        console.error('Error Update Factura:', err)
-        res.status(500).json({ message: 'Error al actualizar', error: err.message })
+        next(err)
     }
 }
 
-export const deleteFactura = async (req, res) => {
+export const deleteFactura = async (req, res, next) => {
     try {
-        const success = await FacturaService.delete(req.params.id)
-        if (!success) return res.status(404).json({ message: 'Factura no encontrada' })
-        res.json({ message: 'Eliminada correctamente' })
+        const result = await FacturaService.delete(req.params.id)
+        res.json(result)
     } catch (err) {
-        res.status(500).json({ message: 'Error al eliminar' })
+        next(err)
     }
 }

@@ -1,55 +1,46 @@
-import { ClienteModel } from '../models/cliente.js'
+import { ClienteService } from '../services/clienteService.js'
 
-export const getClienteById = async (req, res) => {
+export const getClienteById = async (req, res, next) => {
     try {
-        const result = await ClienteModel.findById(req.params.id)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Cliente no encontrado' })
-        res.json(result.rows[0])
+        const cliente = await ClienteService.findById(req.params.id)
+        res.json(cliente)
     } catch (err) {
-        res.status(500).json({ message: 'Error al obtener el cliente por ID' })
+        next(err)
     }
 }
 
-export const getClientes = async (req, res) => {
+export const getClientes = async (req, res, next) => {
     try {
-        const result = await ClienteModel.findAll()
-        res.json(result.rows)
+        const clientes = await ClienteService.findAll()
+        res.json(clientes)
     } catch (err) {
-        res.status(500).json({ message: 'Error al obtener todos los clientes' })
+        next(err)
     }
 }
 
-export const createCliente = async (req, res) => {
+export const createCliente = async (req, res, next) => {
     try {
-        const result = await ClienteModel.create(req.body)
-        res.status(201).json(result.rows[0])
+        const cliente = await ClienteService.create(req.body)
+        res.status(201).json(cliente)
     } catch (err) {
-        res.status(500).json({ message: err.message || 'Error al crear el cliente' })
+        next(err)
     }
 }
 
-export const deleteCliente = async (req, res) => {
+export const deleteCliente = async (req, res, next) => {
     try {
-        const result = await ClienteModel.remove(req.params.id)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Cliente no encontrado' })
-        res.json({ message: 'Cliente eliminado correctamente' })
+        const result = await ClienteService.remove(req.params.id)
+        res.json(result)
     } catch (err) {
-        res.status(500).json({ message: 'Error al eliminar el cliente' })
+        next(err)
     }
 }
 
-export const updateCliente = async (req, res) => {
+export const updateCliente = async (req, res, next) => {
     try {
-        const { id } = req.params
-        const countResult = await ClienteModel.hasContratos(id)
-        if (parseInt(countResult.rows[0].count) > 0) {
-            return res.status(409).json({ message: 'No se puede editar al cliente, esta vinculado con un contrato.' })
-        }
-        const result = await ClienteModel.update(id, req.body)
-        if (result.rows.length === 0) return res.status(404).json({ message: 'Cliente no encontrado' })
-        res.json(result.rows[0])
+        const cliente = await ClienteService.update(req.params.id, req.body)
+        res.json(cliente)
     } catch (err) {
-        console.error('Error al editar al cliente:', err)
-        res.status(500).json({ message: 'Error al editar al cliente' })
+        next(err)
     }
 }
