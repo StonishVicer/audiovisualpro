@@ -12,6 +12,7 @@
         class="transition w-full md:w-[640px] border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
       />
       <div class="flex gap-2">
+        <CurrencySelector />
         <button @click="refresh" class="flex items-center bg-gray-500 hover:bg-gray-600 text-white font-semibold p-2 rounded-lg">
           <Icon icon="material-symbols:refresh" width="20" height="20" />
         </button>
@@ -26,7 +27,7 @@
       <section class="border border-gray-200 rounded-lg p-3 bg-white">
         <div class="flex justify-between items-center mb-3">
           <h4 class="font-semibold">Gastos ({{ filteredGastos.length }})</h4>
-          <div class="text-sm text-gray-600">Total: <strong>${{ totalGastosFiltrados.toFixed(2) }}</strong></div>
+          <div class="text-sm text-gray-600">Total: <strong>{{ getMontoDisplay({ monto_usd: totalGastosFiltrados, monto_ves: totalGastosFiltrados }) }}</strong></div>
         </div>
 
         <div v-if="loadingGastos" class="text-center text-gray-600 py-6">Cargando gastos...</div>
@@ -46,7 +47,7 @@
               <td class="px-3 py-2 text-sm">{{ g.id_gasto }}</td>
               <td class="px-3 py-2 text-sm">{{ g.proyecto?.nombre_proyecto ?? g.id_proyecto ?? '—' }}</td>
               <td class="px-3 py-2 text-sm">{{ g.descripcion_gasto }}</td>
-              <td class="px-3 py-2 text-right font-semibold">${{ Number(g.monto_gasto).toFixed(2) }}</td>
+              <td class="px-3 py-2 text-right font-semibold">{{ getMontoDisplay(g) }}</td>
               <td class="px-3 py-2 text-sm">{{ formatDate(g.fecha_gasto) }}</td>
             </tr>
           </tbody>
@@ -58,7 +59,7 @@
       <section class="border border-gray-200 rounded-lg p-3 bg-white">
         <div class="flex justify-between items-center mb-3">
           <h4 class="font-semibold">Pagos ({{ filteredPagos.length }})</h4>
-          <div class="text-sm text-gray-600">Total: <strong>${{ totalPagosFiltrados.toFixed(2) }}</strong></div>
+          <div class="text-sm text-gray-600">Total: <strong>{{ getMontoDisplay({ monto_usd: totalPagosFiltrados, monto_ves: totalPagosFiltrados }) }}</strong></div>
         </div>
 
         <div v-if="loadingPagos" class="text-center text-gray-600 py-6">Cargando pagos...</div>
@@ -78,7 +79,7 @@
               <td class="px-3 py-2 text-sm">{{ p.id_pago }}</td>
               <td class="px-3 py-2 text-sm">{{ p.personal?.nombre_personal ?? p.id_personal ?? '—' }}</td>
               <td class="px-3 py-2 text-sm">{{ p.asignacion?.nombre_asignacion ?? p.id_asignacion ?? '—' }}</td>
-              <td class="px-3 py-2 text-right font-semibold">${{ Number(p.monto_pagado).toFixed(2) }}</td>
+              <td class="px-3 py-2 text-right font-semibold">{{ getMontoDisplay(p) }}</td>
               <td class="px-3 py-2 text-sm">{{ formatDate(p.fecha_pago) }}</td>
             </tr>
           </tbody>
@@ -94,7 +95,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../services/api.js'
-import { generateReportePDF, generateTestPDF } from '../../utils/generatepdf.js' 
+import CurrencySelector from '../../components/CurrencySelector.vue'
+import { generateReportePDF, generateTestPDF } from '../../utils/generatepdf.js'
+import { useCurrency } from '../../composables/useCurrency.js'
+
+const { getMontoDisplay, getMontoNumber } = useCurrency()
 
 const query = ref('')
 const gastos = ref([])

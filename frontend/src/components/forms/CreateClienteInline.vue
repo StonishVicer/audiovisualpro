@@ -8,31 +8,41 @@ const emit = defineEmits(['created', 'cancel'])
 const loading = ref(false)
 const error = ref('')
 
-const rif = ref('')
+const tipoId = ref('V')
+const numeroId = ref('')
 const nombre = ref('')
 const email = ref('')
+const prefijoTelefono = ref('0412')
 const telefono = ref('')
+
+const prefijos = ['0412', '0414', '0416', '0424', '0426', '0212', '0241', '0243', '0251', '0261']
 
 const showForm = ref(false)
 
 const submit = async () => {
-    if (!rif.value.trim() || !nombre.value.trim()) {
-        error.value = 'RIF y Nombre son obligatorios'
+    if (!numeroId.value.trim() || !nombre.value.trim()) {
+        error.value = 'Identificacion y Nombre son obligatorios'
         return
     }
     error.value = ''
     loading.value = true
     try {
+        const rifCompleto = tipoId.value + '-' + numeroId.value.trim()
+        const telefonoCompleto = telefono.value.trim() ? prefijoTelefono.value + telefono.value.trim() : ''
         const res = await api.crearClienteInline({
-            rif_cliente: rif.value.trim(),
+            rif_cliente: rifCompleto,
             nombre_cliente: nombre.value.trim(),
             email_cliente: email.value.trim() || null,
-            telefono_cliente: telefono.value.trim() || null
+            telefono_cliente: telefonoCompleto || null,
+            tipo_identificacion: tipoId.value,
+            prefijo_telefono: telefono.value.trim() ? prefijoTelefono.value : null
         })
         emit('created', res.data)
-        rif.value = ''
+        tipoId.value = 'V'
+        numeroId.value = ''
         nombre.value = ''
         email.value = ''
+        prefijoTelefono.value = '0412'
         telefono.value = ''
         showForm.value = false
     } catch (err) {
@@ -55,28 +65,40 @@ defineExpose({ showForm, toggle })
         <button v-if="!showForm" @click="toggle"
             class="w-full flex items-center justify-center gap-1 text-sm bg-green-50 text-green-600 px-3 py-2 rounded-lg border border-green-200 hover:bg-green-100 transition cursor-pointer font-medium">
             <Icon icon="mdi:plus" class="w-4 h-4" />
-            Crear nuevo cliente
+            Agregar cliente
         </button>
 
         <div v-else class="bg-green-50/50 p-3 rounded-lg border border-green-100 space-y-2">
             <p class="text-xs font-bold text-green-800 uppercase">Nuevo Cliente</p>
             <div v-if="error" class="text-xs text-red-600 bg-red-50 p-2 rounded">{{ error }}</div>
             <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-xs font-medium text-gray-600">RIF *</label>
-                    <input v-model="rif" type="text" class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none" />
+                <div class="col-span-2">
+                    <label class="text-xs font-medium text-gray-600">Identificacion *</label>
+                    <div class="flex gap-1">
+                        <select v-model="tipoId" class="w-14 border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none bg-white">
+                            <option value="V">V</option>
+                            <option value="J">J</option>
+                            <option value="E">E</option>
+                        </select>
+                        <input v-model="numeroId" type="text" class="flex-1 border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none" placeholder="12345678-9" />
+                    </div>
                 </div>
-                <div>
+                <div class="col-span-2">
                     <label class="text-xs font-medium text-gray-600">Nombre *</label>
                     <input v-model="nombre" type="text" class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none" />
                 </div>
-                <div>
+                <div class="col-span-2">
                     <label class="text-xs font-medium text-gray-600">Email</label>
                     <input v-model="email" type="email" class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none" />
                 </div>
-                <div>
+                <div class="col-span-2">
                     <label class="text-xs font-medium text-gray-600">Telefono</label>
-                    <input v-model="telefono" type="text" class="w-full border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none" />
+                    <div class="flex gap-1">
+                        <select v-model="prefijoTelefono" class="w-20 border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none bg-white">
+                            <option v-for="p in prefijos" :key="p" :value="p">{{ p }}</option>
+                        </select>
+                        <input v-model="telefono" type="text" class="flex-1 border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400 focus:outline-none" placeholder="1234567" />
+                    </div>
                 </div>
             </div>
             <div class="flex gap-2 justify-end">

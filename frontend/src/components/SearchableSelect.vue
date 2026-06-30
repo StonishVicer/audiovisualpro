@@ -136,7 +136,7 @@ defineExpose({ clearSelection })
                 @mousedown.prevent="handleCreate"
                 class="px-3 py-2 hover:bg-green-50 cursor-pointer border-t border-gray-100 text-sm text-green-600 font-medium flex items-center gap-1 transition">
                 <Icon icon="mdi:plus" class="w-4 h-4" />
-                {{ createLabel }}
+                {{ createLabel.includes('[nombre]') ? createLabel.replace('[nombre]', search.trim()) : createLabel }}
             </div>
         </div>
     </div>

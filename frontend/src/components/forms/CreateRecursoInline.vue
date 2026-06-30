@@ -1,8 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../services/api.js'
-import CreateTipoRecursoInline from './CreateTipoRecursoInline.vue'
 
 const emit = defineEmits(['created', 'cancel'])
 
@@ -14,7 +13,6 @@ const id_tipo_recurso = ref(null)
 const tiposRecurso = ref([])
 
 const showForm = ref(false)
-const showCreateTipo = ref(false)
 
 const cargarTipos = async () => {
     try {
@@ -46,12 +44,6 @@ const submit = async () => {
     } finally {
         loading.value = false
     }
-}
-
-const onTipoCreado = (tipo) => {
-    tiposRecurso.value.push(tipo)
-    id_tipo_recurso.value = tipo.id_tipo_recurso
-    showCreateTipo.value = false
 }
 
 const toggle = () => {
@@ -87,7 +79,6 @@ defineExpose({ showForm, toggle })
                     </select>
                 </div>
             </div>
-            <CreateTipoRecursoInline @created="onTipoCreado" @cancel="showCreateTipo = false" />
             <div class="flex gap-2 justify-end">
                 <button @click="toggle" :disabled="loading"
                     class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400 transition cursor-pointer">Cancelar</button>

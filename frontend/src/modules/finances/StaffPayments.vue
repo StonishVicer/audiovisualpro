@@ -2,9 +2,13 @@
 import { Icon } from '@iconify/vue';
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
+import CurrencySelector from '../../components/CurrencySelector.vue'
 import { onMounted, ref, computed } from 'vue'
 import api from '../../services/api.js'
 import Confirmation from '../../components/Confirmation.vue'
+import { useCurrency } from '../../composables/useCurrency.js'
+
+const { getMontoDisplay, getMontoNumber } = useCurrency()
 
 // --- ESTADO ---
 const pagos = ref([])
@@ -172,7 +176,8 @@ onMounted(() => {
         </div>
 
         <div class="mb-3">
-            <div class="flex justify-end">
+            <div class="flex justify-between items-center">
+                <CurrencySelector />
                 <button @click="showModal = true" class="w-50 flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold p-2 rounded-lg transition-colors">
                     <Icon icon="mdi:cash-plus" width="25" height="25" class="mr-2" />
                     Nuevo Pago
@@ -222,7 +227,7 @@ onMounted(() => {
                         <tr v-for="pago in filteredPagos" :key="pago.id_pago" class="border-b border-green-100 hover:bg-green-50 transition">
                             <td class="px-4 py-2 font-medium">{{ pago.nombre_personal || pago.personal?.nombre_personal || '—' }}</td>
                             
-                            <td class="px-4 py-2 font-bold text-green-700">${{ Number(pago.monto_pagado).toFixed(2) }}</td>
+                            <td class="px-4 py-2 font-bold text-green-700">{{ getMontoDisplay(pago) }}</td>
                             <td class="px-4 py-2 text-gray-600">{{ formatDate(pago.fecha_pago) }}</td>
                             <td class="px-4 py-2 text-gray-500 italic text-sm truncate max-w-xs">{{ pago.motivo_pago || '—' }}</td>
                             <td class="px-4 py-2 flex items-center gap-2">

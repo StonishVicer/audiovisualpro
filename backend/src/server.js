@@ -3,7 +3,6 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
-import { Server } from 'socket.io';
 import rateLimit from 'express-rate-limit';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
@@ -12,7 +11,6 @@ import { logger } from './config/logger.js';
 import { verifyToken } from './middlewares/auth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { requestLogger } from './middlewares/requestLogger.js';
-import { setupChat } from './sockets/chat.js';
 
 import authRoutes from './routes/auth.routes.js';
 import healthRoutes from './routes/health.routes.js';
@@ -35,6 +33,7 @@ import entregablesRoutes from './routes/entregables.routes.js';
 import estadosEntregableRoutes from './routes/estadosEntregable.routes.js';
 import categoriasGastoRoutes from './routes/categoriasGasto.routes.js';
 import proyectoCompleteRoutes from './routes/proyectoComplete.routes.js';
+import monedaRoutes from './routes/moneda.routes.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -53,21 +52,17 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-const io = new Server(httpServer, {
-    cors: { origin: corsOrigins, methods: ['GET', 'POST'] }
-});
-
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 200,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Demasiadas peticiones, intente más tarde' }
 });
 
-const authLimiter = rateLimit({
+const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: process.env.NODE_ENV === 'development' ? 100 : 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Demasiados intentos de inicio de sesión, intente más tarde' }
@@ -106,7 +101,18 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/health', healthRoutes);
 
-app.use('/api/auth', authLimiter, authRoutes);
+app.get('/api/auth/verify', verifyToken, (req, res) => {
+    res.json({
+        valid: true,
+        user: {
+            id_gestor: req.user.id_gestor,
+            usuario_gestor: req.user.usuario_gestor,
+            nombre_gestor: req.user.nombre_gestor
+        }
+    })
+});
+
+app.use('/api/auth', loginLimiter, authRoutes);
 
 app.use('/api', apiLimiter);
 app.use('/api', verifyToken);
@@ -130,10 +136,9 @@ app.use('/api/entregables', entregablesRoutes);
 app.use('/api/estadosentregable', estadosEntregableRoutes);
 app.use('/api/categoriasgasto', categoriasGastoRoutes);
 app.use('/api/proyectos/complete', proyectoCompleteRoutes);
+app.use('/api/moneda', monedaRoutes);
 
 app.use(errorHandler);
-
-setupChat(io);
 
 httpServer.listen(config.port, () => {
     logger.info(`Servidor corriendo en http://localhost:${config.port}`);

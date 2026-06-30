@@ -39,8 +39,11 @@ const id_estado = ref(null)
 const fecha_inicio = ref('')
 const fecha_fin_estimada = ref('')
 const presupuesto = ref(0)
+const presupuestoMoneda = ref('VES')
 const tiposProyectos = ref([])
 const estadosProyectos = ref([])
+const loadingTipos = ref(false)
+const loadingEstados = ref(false)
 const errorsStep1 = ref({ nombre: '', id_tipo: '', id_estado: '', fecha_inicio: '', fecha_fin_estimada: '', presupuesto: '' })
 
 const minFechaFin = computed(() => {
@@ -91,6 +94,22 @@ const showPersonalInline = ref(false)
 const loadingPersonalOpts = ref(false)
 const horasPers = ref('')
 
+const personaSeleccionada = computed(() => {
+    if (!selectedPersId.value) return null
+    return personal.value.find(p => p.id_personal === selectedPersId.value) || null
+})
+
+const costoEstimadoPersona = computed(() => {
+    if (!personaSeleccionada.value || !horasPers.value) return 0
+    const salario = Number(personaSeleccionada.value.salario) || 0
+    const horas = Number(horasPers.value) || 0
+    return salario > 0 ? (salario / 160) * horas : 0
+})
+
+const costoTotalPersonal = computed(() =>
+    persSeleccionados.value.reduce((sum, p) => sum + (Number(p.costo_estimado) || 0), 0)
+)
+
 // ── Step 6 ──
 const descripcion_servicios = ref('Servicios de produccion audiovisual')
 
@@ -101,8 +120,8 @@ const resumenCliente = computed(() => {
 })
 
 // ── Data Loading ──
-const cargarTipos = async () => { try { const r = await api.get('/api/tiposproyecto'); tiposProyectos.value = r.data } catch (e) { console.error(e) } }
-const cargarEstados = async () => { try { const r = await api.get('/api/estadosproyecto'); estadosProyectos.value = r.data } catch (e) { console.error(e) } }
+const cargarTipos = async () => { loadingTipos.value = true; try { const r = await api.get('/api/tiposproyecto'); tiposProyectos.value = r.data } catch (e) { console.error(e); displayToast('Error al cargar tipos de proyecto', 'error') } finally { loadingTipos.value = false } }
+const cargarEstados = async () => { loadingEstados.value = true; try { const r = await api.get('/api/estadosproyecto'); estadosProyectos.value = r.data } catch (e) { console.error(e); displayToast('Error al cargar estados de proyecto', 'error') } finally { loadingEstados.value = false } }
 const cargarClientes = async () => { try { const r = await api.get('/api/clientes'); clientes.value = r.data } catch (e) { console.error(e) } }
 const cargarLocaciones = async () => { loadingLocacionesOpts.value = true; try { const r = await api.get('/api/locacion'); locaciones.value = r.data } catch (e) { console.error(e) } finally { loadingLocacionesOpts.value = false } }
 const cargarRecursos = async () => { loadingRecursosOpts.value = true; try { const r = await api.get('/api/recursostecnicos'); recursos.value = r.data } catch (e) { console.error(e) } finally { loadingRecursosOpts.value = false } }
@@ -146,7 +165,15 @@ const removeRecurso = (idx) => { recSeleccionados.value.splice(idx, 1) }
 const onSelectPersonal = (obj) => {
     if (!obj) return
     if (persSeleccionados.value.find(p => p.id_personal === obj.id_personal)) return
-    persSeleccionados.value.push({ ...obj, horas_trabajadas: horasPers.value || 0, source: 'existing' })
+    const salario = Number(obj.salario) || 0
+    const horas = Number(horasPers.value) || 0
+    persSeleccionados.value.push({
+        ...obj,
+        horas_trabajadas: horas,
+        salario: salario,
+        costo_estimado: salario > 0 && horas > 0 ? (salario / 160) * horas : 0,
+        source: 'existing'
+    })
     selectedPersId.value = null; horasPers.value = ''
 }
 const removePersonal = (idx) => { persSeleccionados.value.splice(idx, 1) }
@@ -155,18 +182,30 @@ const removePersonal = (idx) => { persSeleccionados.value.splice(idx, 1) }
 const onClienteCreado = (data) => { clienteCreado.value = data; clientes.value.push(data); showClienteInline.value = false }
 const onLocacionCreada = (data) => { locaciones.value.push(data); locSeleccionadas.value.push({ ...data, source: 'new' }); showLocacionInline.value = false }
 const onRecursoCreado = (data) => { recursos.value.push(data); recSeleccionados.value.push({ ...data, fecha_inicio_uso: fechaInicioRec.value, fecha_fin_uso: fechaFinRec.value, source: 'new' }); showRecursoInline.value = false; fechaInicioRec.value = ''; fechaFinRec.value = '' }
-const onPersonalCreado = (data) => { personal.value.push(data); persSeleccionados.value.push({ ...data, horas_trabajadas: horasPers.value || 0, source: 'new' }); showPersonalInline.value = false; horasPers.value = '' }
+const onPersonalCreado = (data) => {
+    const salario = Number(data.salario) || 0
+    const horas = Number(horasPers.value) || 0
+    personal.value.push(data)
+    persSeleccionados.value.push({
+        ...data,
+        horas_trabajadas: horas,
+        salario: salario,
+        costo_estimado: salario > 0 && horas > 0 ? (salario / 160) * horas : 0,
+        source: 'new'
+    })
+    showPersonalInline.value = false; horasPers.value = ''
+}
 
 // ── Submit ──
 const submitProyecto = async () => {
     submitting.value = true
     try {
         const payload = {
-            proyecto: { nombre: nombre.value, id_tipo: Number(id_tipo.value), id_estado: Number(id_estado.value), fecha_inicio: fecha_inicio.value, fecha_fin_estimada: fecha_fin_estimada.value, presupuesto: Number(presupuesto.value) },
+            proyecto: { nombre: nombre.value, id_tipo: Number(id_tipo.value), id_estado: Number(id_estado.value), fecha_inicio: fecha_inicio.value, fecha_fin_estimada: fecha_fin_estimada.value, presupuesto: Number(presupuesto.value), moneda_presupuesto: presupuestoMoneda.value },
             cliente: clienteCreado.value ? { nuevo: { rif: clienteCreado.value.rif_cliente, nombre: clienteCreado.value.nombre_cliente, email: clienteCreado.value.email_cliente, telefono: clienteCreado.value.telefono_cliente } } : { id_cliente_existente: Number(id_cliente_existente.value) },
             locaciones: locSeleccionadas.value.map(l => l.source === 'new' ? { nueva: { nombre: l.nombre_locacion, direccion: l.direccion || l.direccion_locacion || '', descripcion: l.descripcion_locacion || '' } } : { id_locacion: l.id_locacion }),
             recursos: recSeleccionados.value.map(r => r.source === 'new' ? { nuevo: { nombre: r.nombre_equipo || r.nombre || '', id_tipo_recurso: r.id_tipo_recurso }, fecha_inicio_uso: r.fecha_inicio_uso, fecha_fin_uso: r.fecha_fin_uso } : { id_recurso: r.id_recurso, fecha_inicio_uso: r.fecha_inicio_uso, fecha_fin_uso: r.fecha_fin_uso }),
-            personal: persSeleccionados.value.map(p => p.source === 'new' ? { nuevo: { nombre_personal: p.nombre_personal || '', cedula: p.cedula_personal || '', id_rol: Number(p.id_rol) || 0, salario: Number(p.salario) || 0, email: p.email_personal || '', telefono: p.telefono || '' }, horas_trabajadas: Number(p.horas_trabajadas) || 0 } : { id_personal: p.id_personal, horas_trabajadas: Number(p.horas_trabajadas) || 0 }),
+            personal: persSeleccionados.value.map(p => p.source === 'new' ? { nuevo: { nombre_personal: p.nombre_personal || '', cedula: p.cedula_personal || '', tipo_identificacion: p.tipo_identificacion || 'V', id_rol: Number(p.id_rol) || 0, salario: Number(p.salario) || 0, email: p.email_personal || '', telefono: p.telefono || '', prefijo_telefono: p.prefijo_telefono || null }, horas_trabajadas: Number(p.horas_trabajadas) || 0 } : { id_personal: p.id_personal, horas_trabajadas: Number(p.horas_trabajadas) || 0 }),
             contrato: { descripcion_servicios: descripcion_servicios.value, fecha_firma: new Date().toISOString().slice(0, 10) }
         }
 
@@ -241,17 +280,30 @@ onMounted(() => {
                         </div>
                         <div>
                             <label class="text-sm font-semibold text-gray-500 block mb-1">Tipo de Proyecto <span class="text-red-500">*</span></label>
-                            <SearchableSelect :options="tiposProyectos" label-key="nombre_tipo" placeholder="Buscar tipo..." v-model="id_tipo" />
+                            <select v-model="id_tipo" :disabled="loadingTipos" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                                <option :value="null" disabled>Seleccione un tipo...</option>
+                                <option v-for="t in tiposProyectos" :key="t.id_tipo_proyecto" :value="t.id_tipo_proyecto">{{ t.nombre_tipo }}</option>
+                            </select>
                             <p v-if="id_tipo == null" class="text-xs text-red-500 mt-0.5">Seleccione un tipo</p>
                         </div>
                         <div>
                             <label class="text-sm font-semibold text-gray-500 block mb-1">Estado <span class="text-red-500">*</span></label>
-                            <SearchableSelect :options="estadosProyectos" label-key="nombre_estado" placeholder="Buscar estado..." v-model="id_estado" />
+                            <select v-model="id_estado" :disabled="loadingEstados" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                                <option :value="null" disabled>Seleccione un estado...</option>
+                                <option v-for="e in estadosProyectos" :key="e.id_estado_proyecto" :value="e.id_estado_proyecto">{{ e.nombre_estado }}</option>
+                            </select>
                             <p v-if="id_estado == null" class="text-xs text-red-500 mt-0.5">Seleccione un estado</p>
                         </div>
                         <div>
                             <label class="text-sm font-semibold text-gray-500 block mb-1">Presupuesto <span class="text-red-500">*</span></label>
-                            <input v-model="presupuesto" type="number" min="0" :class="['w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400', presupuesto <= 0 ? 'border-red-300' : 'border-gray-200']" />
+                            <div class="flex gap-1">
+                                <div class="flex-1 relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">{{ presupuestoMoneda === 'USD' ? '$' : 'Bs.' }}</span>
+                                    <input v-model="presupuesto" type="number" min="0" :class="['w-full border rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400', presupuesto <= 0 ? 'border-red-300' : 'border-gray-200']" />
+                                </div>
+                                <button type="button" @click="presupuestoMoneda = 'USD'" :class="['px-3 py-2 rounded-lg text-sm font-bold border transition cursor-pointer', presupuestoMoneda === 'USD' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200']">$</button>
+                                <button type="button" @click="presupuestoMoneda = 'VES'" :class="['px-3 py-2 rounded-lg text-sm font-bold border transition cursor-pointer', presupuestoMoneda === 'VES' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200']">Bs.</button>
+                            </div>
                             <p v-if="presupuesto <= 0" class="text-xs text-red-500 mt-0.5">Debe ser mayor a 0</p>
                         </div>
                         <div>
@@ -321,12 +373,25 @@ onMounted(() => {
                     <p class="text-sm text-gray-400 mb-2">Busque y asigne personal al proyecto</p>
                     <div class="flex gap-2">
                         <div class="flex-1"><SearchableSelect :options="personal" label-key="nombre_personal" sublabel-key="nombre_rol" placeholder="Buscar personal..." v-model="selectedPersId" @select="onSelectPersonal" :loading="loadingPersonalOpts" :allow-create="true" create-label="Crear nuevo personal..." @create="showPersonalInline = true" /></div>
-                        <input v-model="horasPers" type="number" min="0" step="0.5" class="w-24 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm" placeholder="Horas" />
+                        <div class="flex flex-col items-center gap-0.5">
+                            <input v-model="horasPers" type="number" min="0" step="0.5" class="w-20 border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm" placeholder="Horas" />
+                            <span class="text-xs text-gray-400">horas</span>
+                        </div>
+                    </div>
+                    <div v-if="personaSeleccionada && horasPers" class="bg-green-50 rounded-lg p-2 border border-green-100 text-xs text-green-800 space-y-1">
+                        <p v-if="personaSeleccionada.salario > 0">
+                            <span class="text-gray-500">Salario mensual:</span> Bs. {{ Number(personaSeleccionada.salario).toLocaleString('es-VE') }}
+                            <span class="text-gray-400"> → Tarifa/hora: Bs. {{ (Number(personaSeleccionada.salario) / 160).toFixed(2) }}</span>
+                        </p>
+                        <p v-if="costoEstimadoPersona > 0" class="font-semibold">
+                            Costo estimado: Bs. {{ costoEstimadoPersona.toLocaleString('es-VE', { minimumFractionDigits: 2 }) }}
+                        </p>
                     </div>
                     <div v-if="persSeleccionados.length" class="flex flex-wrap gap-2">
-                        <span v-for="(p, idx) in persSeleccionados" :key="idx" class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg border border-indigo-100 flex items-center gap-2 text-sm">
+                        <span v-for="(p, idx) in persSeleccionados" :key="idx" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 flex items-center gap-2 text-sm">
                             <Icon icon="mdi:account" class="w-4 h-4" /> {{ p.nombre_personal }}
-                            <span v-if="p.horas_trabajadas" class="text-xs">({{ p.horas_trabajadas }}h)</span>
+                            <span v-if="p.horas_trabajadas" class="text-xs">({{ p.horas_trabajadas }} hrs)</span>
+                            <span v-if="p.costo_estimado > 0" class="text-xs font-semibold">Bs. {{ Math.round(p.costo_estimado) }}</span>
                             <button @click="removePersonal(idx)" class="text-red-500 hover:text-red-700 cursor-pointer"><Icon icon="mdi:close-circle" class="w-4 h-4" /></button>
                         </span>
                     </div>
@@ -340,11 +405,12 @@ onMounted(() => {
                         <div class="grid grid-cols-2 gap-3 text-sm">
                             <div><span class="text-gray-400">Proyecto:</span><span class="font-semibold ml-1">{{ nombre }}</span></div>
                             <div><span class="text-gray-400">Cliente:</span><span class="font-semibold ml-1">{{ resumenCliente }}</span></div>
-                            <div><span class="text-gray-400">Presupuesto:</span><span class="font-semibold text-green-600 ml-1">Bs. {{ presupuesto }}</span></div>
+                            <div><span class="text-gray-400">Presupuesto:</span><span class="font-semibold text-green-600 ml-1">{{ presupuestoMoneda === 'USD' ? '$' : 'Bs.' }} {{ presupuesto }}</span></div>
                             <div><span class="text-gray-400">Fecha Firma:</span><span class="font-semibold ml-1">{{ new Date().toLocaleDateString('es-VE') }}</span></div>
                             <div><span class="text-gray-400">Locaciones:</span><span class="font-semibold ml-1">{{ locSeleccionadas.length }}</span></div>
                             <div><span class="text-gray-400">Recursos:</span><span class="font-semibold ml-1">{{ recSeleccionados.length }}</span></div>
                             <div><span class="text-gray-400">Personal:</span><span class="font-semibold ml-1">{{ persSeleccionados.length }}</span></div>
+                            <div v-if="costoTotalPersonal > 0"><span class="text-gray-400">Costo Personal Est.:</span><span class="font-semibold text-indigo-600 ml-1">Bs. {{ Math.round(costoTotalPersonal).toLocaleString('es-VE') }}</span></div>
                             <div><span class="text-gray-400">Fechas:</span><span class="font-semibold ml-1">{{ fecha_inicio }} al {{ fecha_fin_estimada }}</span></div>
                         </div>
                         <div>

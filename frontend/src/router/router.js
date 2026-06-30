@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import api from '../services/api.js'
 
 import MainView from '../modules/auth/Login.vue'
 import LandingPage from '../modules/auth/Landing.vue'
@@ -25,10 +26,6 @@ import ExpenseList from '../modules/finances/ExpenseList.vue'
 import StaffPayments from '../modules/finances/StaffPayments.vue'
 import FinancialReports from '../modules/finances/FinancialReports.vue'
 
-import AdminChat from '../modules/chat/AdminChat.vue'
-import ClientChat from '../modules/chat/ClientChat.vue'
-
-import SettingsView from '../modules/settings/SettingsView.vue'
 
 const routes = [
     {
@@ -42,11 +39,6 @@ const routes = [
         name: 'Main View',
         component: MainView,
         meta: { requiresGuest: true }
-    },
-    {
-        path: '/client/chat',
-        name: 'Client Chat',
-        component: ClientChat
     },
     {
         path: '/system',
@@ -67,15 +59,6 @@ const routes = [
             { path: '/system/gastos', name: 'Gastos', component: ExpenseList },
             { path: '/system/pagospersonal', name: 'Pagos Personal', component: StaffPayments },
             { path: '/system/reportesfinancieros', name: 'Reportes Financieros', component: FinancialReports },
-            { path: '/system/chat', name: 'Admin Chat', component: AdminChat },
-            { path: '/system/configuracion', name: 'Configuracion', component: SettingsView },
-            // Redirecciones de rutas antiguas a Configuracion
-            { path: '/system/tiposproyectos', redirect: '/system/configuracion' },
-            { path: '/system/estadosproyectos', redirect: '/system/configuracion' },
-            { path: '/system/rolespersonal', redirect: '/system/configuracion' },
-            { path: '/system/tiposrecursos', redirect: '/system/configuracion' },
-            { path: '/system/categoriasgasto', redirect: '/system/configuracion' },
-            // Ruta para Finanzas (sidebar item)
             { path: '/system/finanzas', name: 'Finanzas', component: InvoiceList }
         ]
     }
@@ -86,15 +69,67 @@ const router = createRouter({
     routes
 })
 
-router.beforeEach((to, from, next) => {
+let tokenVerified = false
+let verifyPromise = null
+
+router.beforeEach(async (to, from, next) => {
     const token = localStorage.getItem('token')
-    if (to.meta.requiresAuth && !token) {
-        next('/')
-    } else if (to.meta.requiresGuest && token) {
-        next('/system')
-    } else {
-        next()
+
+    if (to.meta.requiresAuth) {
+        if (!token) {
+            tokenVerified = false
+            return next('/')
+        }
+        if (tokenVerified) {
+            return next()
+        }
+        if (verifyPromise) {
+            try {
+                await verifyPromise
+                return next()
+            } catch {
+                return next('/login')
+            }
+        }
+        verifyPromise = api.get('/api/auth/verify')
+        try {
+            await verifyPromise
+            tokenVerified = true
+            verifyPromise = null
+            return next()
+        } catch (error) {
+            localStorage.removeItem('token')
+            tokenVerified = false
+            verifyPromise = null
+            return next('/login')
+        }
     }
+
+    if (to.meta.requiresGuest) {
+        if (!token) {
+            tokenVerified = false
+            return next()
+        }
+        if (tokenVerified) {
+            return next('/system')
+        }
+        if (!verifyPromise) {
+            verifyPromise = api.get('/api/auth/verify')
+        }
+        try {
+            await verifyPromise
+            tokenVerified = true
+            verifyPromise = null
+            return next('/system')
+        } catch (error) {
+            localStorage.removeItem('token')
+            tokenVerified = false
+            verifyPromise = null
+            return next()
+        }
+    }
+
+    next()
 })
 
 export default router

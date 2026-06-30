@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [2.2.0] — 2026-06-30
+
+### Added
+- **Arquitectura Bimonetaria (USD/VES)**: Soporte completo para transacciones en dos monedas.
+  - Nuevas tablas: `monedas`, `tipos_cambio`
+  - Columnas `id_moneda`, `monto_usd`, `monto_ves` en `facturas`, `gastos`, `pagos_personal`
+  - Servicio `MonedaService` con caché de tasa de cambio (TTL: 1 hora), conversión bimonetaria y logging
+  - Endpoints: `GET /api/moneda/tasa/:fecha?`, `POST /api/moneda/tasa`, `POST /api/moneda/convertir`, `GET /api/moneda/list`
+  - Migración SQL: `backend/migrations/005_moneda_bimonetaria.sql`
+  - Composable frontend `useCurrency.js` con estado compartido de moneda
+  - Componente `CurrencySelector.vue` para selección de moneda con tasa en tiempo real
+  - Integración en `InvoiceList`, `ExpenseList`, `StaffPayments`, `FinancialReports`
+- **Creación inline de tipos/estados desde el Wizard**: `SearchableSelect` permite crear tipos y estados de proyecto sin salir del wizard
+- **Estado de carga en selectores del Wizard**: Indicadores de carga (`loading`) para tipos y estados de proyecto
+- **Validación robusta en Step 1 del Wizard**: El botón "Siguiente" se deshabilita si no hay tipos/estados cargados
+
+### Fixed
+- **Bug de renderizado en tarjeta de proyecto**: Eliminado el acceso a `lista_locaciones` y `recursos_asignados` que causaban "Error al cargar la información"
+- **Reemplazado badge de estado complejo**: La lógica "Todo está bien" / "Detalles" se reemplazó por un badge simple basado en el estado del proyecto (En Progreso → Amarillo, Finalizado → Verde, Cancelado → Rojo)
+
+### Changed
+- **`Proyecto.vue`**: Eliminadas props `locacionesAsignadas` y `recursosAsignados`; añadido `estadoBadge` computado
+- **`ProjectList.vue`**: Simplificado `getProyectos()` eliminando mapeo de arrays no existentes
+- **`SearchableSelect.vue`**: El label de creación ahora muestra el nombre ingresado (`Crear nuevo tipo: [nombre]`)
+- **Servicios financieros**: `FacturaService`, `GastoService`, `PagoService` ahora calculan y persisten montos en ambas monedas
+- **`server.js`**: Añadida ruta `/api/moneda`
+
 ## [2.0.0] — 2026-06-27
 
 ### Added

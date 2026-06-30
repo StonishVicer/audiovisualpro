@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../services/api.js'
 import Toast from './Toast.vue'
@@ -39,6 +39,8 @@ const formatearFechaDos = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+const FORMATO_MONEDA = (monto) => Number(monto || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 const tabs = [
     { id: 'general', label: 'General', icon: 'mdi:information-outline' },
     { id: 'locaciones', label: 'Locaciones', icon: 'mdi:map-marker' },
@@ -51,21 +53,23 @@ const tabs = [
 const loadAllData = () => {
     cargarLocaciones()
     cargarRecursos()
-    cargarPersonal()
     cargarEntregables()
-    cargarFinanzas()
+    // Personal must load before finanzas for pagos filtering
+    cargarPersonal().then(() => cargarFinanzas())
 }
 
 watch(() => props.show, (val) => {
-    if (val) {
-        visible.value = true
-        loadAllData()
-    } else {
+    if (!val) {
         visible.value = false
     }
 })
 
-// --- Locaciones ---
+onMounted(() => {
+    visible.value = true
+    loadAllData()
+})
+
+// ─── Locaciones ───
 const locDisponibles = ref([])
 const locAsignadas = ref([])
 const idLocSeleccionada = ref(null)
@@ -84,7 +88,11 @@ const cargarLocaciones = async () => {
         ])
         locDisponibles.value = disp.data
         if (asig.data && asig.data.locaciones) {
-            locAsignadas.value = asig.data.locaciones.map(l => l.nombre_locacion)
+            locAsignadas.value = asig.data.locaciones.map(l => ({
+                id_locacion: l.id_locacion,
+                nombre_locacion: l.nombre_locacion,
+                direccion: l.direccion
+            }))
         }
     } catch (e) {
         errorLoc.value = 'Error al cargar locaciones'
@@ -101,7 +109,7 @@ const asignarLocacion = async () => {
             id_locacion: idLocSeleccionada.value
         })
         const loc = locDisponibles.value.find(l => l.id_locacion === idLocSeleccionada.value)
-        if (loc) locAsignadas.value.push(loc.nombre_locacion)
+        if (loc) locAsignadas.value.push(loc)
         idLocSeleccionada.value = null
         showLocForm.value = false
         displayToast('Locacion asignada', 'success')
@@ -110,13 +118,11 @@ const asignarLocacion = async () => {
     } finally { loadingLoc.value = false }
 }
 
-const desasignarLocacion = async (nombreLoc) => {
-    if (!confirm(`Desasignar locacion "${nombreLoc}"?`)) return
-    const loc = locDisponibles.value.find(l => l.nombre_locacion === nombreLoc)
-    if (!loc) return
+const desasignarLocacion = async (loc) => {
+    if (!confirm(`Desasignar locacion "${loc.nombre_locacion}"?`)) return
     try {
         await api.delete(`/api/proyectos/desasignarlocacion/${props.proyecto.id_proyecto}/${loc.id_locacion}`)
-        locAsignadas.value = locAsignadas.value.filter(l => l !== nombreLoc)
+        locAsignadas.value = locAsignadas.value.filter(l => l.id_locacion !== loc.id_locacion)
         displayToast('Locacion desasignada', 'success')
     } catch (e) {
         displayToast('Error al desasignar locacion', 'error')
@@ -128,7 +134,7 @@ const onLocacionCreada = (data) => {
     displayToast('Locacion creada', 'success')
 }
 
-// --- Recursos ---
+// ─── Recursos ───
 const recDisponibles = ref([])
 const recAsignados = ref([])
 const idRecSeleccionado = ref(null)
@@ -151,7 +157,8 @@ const cargarRecursos = async () => {
         if (asig.data && asig.data.recursos) {
             recAsignados.value = asig.data.recursos.map(r => ({
                 id_recurso: r.id_recurso,
-                nombre_recurso: r.nombre_equipo,
+                nombre_equipo: r.nombre_equipo,
+                nombre_tipo: r.nombre_tipo,
                 fecha_inicio_uso: r.fecha_inicio_uso,
                 fecha_fin_uso: r.fecha_fin_uso
             }))
@@ -176,7 +183,13 @@ const asignarRecurso = async () => {
             fecha_fin_uso: fechaFinRec.value
         })
         const rec = recDisponibles.value.find(r => r.id_recurso === idRecSeleccionado.value)
-        if (rec) recAsignados.value.push({ id_recurso: rec.id_recurso, nombre_recurso: rec.nombre_equipo, fecha_inicio_uso: fechaInicioRec.value, fecha_fin_uso: fechaFinRec.value })
+        if (rec) recAsignados.value.push({
+            id_recurso: rec.id_recurso,
+            nombre_equipo: rec.nombre_equipo,
+            nombre_tipo: rec.nombre_tipo,
+            fecha_inicio_uso: fechaInicioRec.value,
+            fecha_fin_uso: fechaFinRec.value
+        })
         idRecSeleccionado.value = null; fechaInicioRec.value = ''; fechaFinRec.value = ''; showRecForm.value = false
         displayToast('Recurso asignado', 'success')
     } catch (e) {
@@ -184,11 +197,11 @@ const asignarRecurso = async () => {
     } finally { loadingRec.value = false }
 }
 
-const desasignarRecurso = async (idRec, nombre) => {
-    if (!confirm(`Desasignar "${nombre}"?`)) return
+const desasignarRecurso = async (rec) => {
+    if (!confirm(`Desasignar "${rec.nombre_equipo}"?`)) return
     try {
-        await api.delete(`/api/proyectos/desasignarrecurso/${props.proyecto.id_proyecto}/${idRec}`)
-        recAsignados.value = recAsignados.value.filter(r => r.id_recurso !== idRec)
+        await api.delete(`/api/proyectos/desasignarrecurso/${props.proyecto.id_proyecto}/${rec.id_recurso}`)
+        recAsignados.value = recAsignados.value.filter(r => r.id_recurso !== rec.id_recurso)
         displayToast('Recurso desasignado', 'success')
     } catch (e) { displayToast('Error al desasignar recurso', 'error') }
 }
@@ -198,7 +211,7 @@ const onRecursoCreado = (data) => {
     displayToast('Recurso creado', 'success')
 }
 
-// --- Personal ---
+// ─── Personal ───
 const personalDisponibles = ref([])
 const asignacionesPersonal = ref([])
 const idPersonalSelect = ref(null)
@@ -222,7 +235,12 @@ const cargarPersonal = async () => {
                 id_asignacion: a.id_asignacion,
                 id_personal: a.id_personal,
                 nombre_personal: a.nombre_personal,
-                horas_trabajadas: a.horas_trabajadas
+                nombre_rol: a.nombre_rol,
+                horas_trabajadas: a.horas_trabajadas,
+                salario: Number(a.salario) || 0,
+                costo_estimado: (Number(a.salario) || 0) > 0 && (Number(a.horas_trabajadas) || 0) > 0
+                    ? ((Number(a.salario) / 160) * Number(a.horas_trabajadas))
+                    : 0
             }))
         }
     } catch (e) {
@@ -243,7 +261,12 @@ const asignarPersonal = async () => {
         const persona = personalDisponibles.value.find(p => p.id_personal === idPersonalSelect.value)
         asignacionesPersonal.value.push({
             ...res.data,
-            nombre_personal: persona?.nombre_personal || `#${idPersonalSelect.value}`
+            nombre_personal: persona?.nombre_personal || `#${idPersonalSelect.value}`,
+            nombre_rol: persona?.nombre_rol || '',
+            salario: Number(persona?.salario) || 0,
+            costo_estimado: (Number(persona?.salario) || 0) > 0 && (Number(horasTrab.value) || 0) > 0
+                ? ((Number(persona.salario) / 160) * Number(horasTrab.value))
+                : 0
         })
         idPersonalSelect.value = null; horasTrab.value = ''; showPersForm.value = false
         displayToast('Personal asignado', 'success')
@@ -266,7 +289,11 @@ const onPersonalCreado = (data) => {
     displayToast('Personal creado', 'success')
 }
 
-// --- Entregables ---
+const totalCostoPersonal = computed(() =>
+    asignacionesPersonal.value.reduce((sum, a) => sum + (a.costo_estimado || 0), 0)
+)
+
+// ─── Entregables ───
 const entregables = ref([])
 const loadingEnt = ref(false)
 const errorEnt = ref('')
@@ -280,7 +307,7 @@ const cargarEntregables = async () => {
     errorEnt.value = ''
     try {
         const res = await api.get('/api/entregables')
-        entregables.value = (res.data || []).filter(e => e.id_proyecto === props.proyecto.id_proyecto)
+        entregables.value = (res.data || []).filter(e => Number(e.id_proyecto) === Number(props.proyecto.id_proyecto))
     } catch (e) { errorEnt.value = 'Error al cargar entregables'; console.error(e) } finally { loadingEnt.value = false }
 }
 
@@ -332,27 +359,108 @@ const deleteEnt = async (id) => {
     } catch (e) { displayToast('Error al eliminar', 'error') }
 }
 
-// --- Finanzas ---
+// ─── Finanzas ───
+const contratosProyecto = ref([])
 const facturas = ref([])
 const gastos = ref([])
+const pagosPersonal = ref([])
+const categoriasGasto = ref([])
 const loadingFin = ref(false)
 const errorFin = ref('')
+const showGastoForm = ref(false)
+const showFacturaForm = ref(false)
+const submittingFin = ref(false)
+const gastoForm = ref({ descripcion: '', monto: '', fecha: new Date().toISOString().slice(0, 10), id_categoria: null })
+const facturaForm = ref({ numero: '', total: '', fecha: new Date().toISOString().slice(0, 10) })
 
 const cargarFinanzas = async () => {
     loadingFin.value = true
     errorFin.value = ''
     try {
-        const [factRes, gastoRes] = await Promise.all([
+        const [contratosRes, facturasRes, gastosRes, pagosRes, catsRes] = await Promise.all([
+            api.get('/api/contratos'),
             api.get('/api/facturas'),
-            api.get('/api/gastos')
+            api.get('/api/gastos'),
+            api.get('/api/pagos_personal'),
+            api.get('/api/categoriasgasto')
         ])
-        facturas.value = (factRes.data || []).filter(f => f.id_contrato ? f.id_proyecto === props.proyecto.id_proyecto : false)
-        gastos.value = (gastoRes.data || []).filter(g => g.id_contrato ? g.id_proyecto === props.proyecto.id_proyecto : false)
-    } catch (e) { errorFin.value = 'Error al cargar finanzas'; console.error(e) } finally { loadingFin.value = false }
+        categoriasGasto.value = catsRes.data || []
+        contratosProyecto.value = (contratosRes.data || []).filter(
+            c => Number(c.id_proyecto) === Number(props.proyecto.id_proyecto)
+        )
+        const contratoIds = contratosProyecto.value.map(c => c.id_contrato)
+
+        facturas.value = (facturasRes.data || []).filter(
+            f => contratoIds.includes(Number(f.id_contrato))
+        )
+        gastos.value = (gastosRes.data || []).filter(
+            g => contratoIds.includes(Number(g.id_contrato))
+        )
+
+        const personalIds = asignacionesPersonal.value.map(a => a.id_personal)
+        pagosPersonal.value = (pagosRes.data || []).filter(
+            p => personalIds.includes(Number(p.id_personal))
+        )
+    } catch (e) {
+        errorFin.value = 'Error al cargar finanzas'
+        console.error(e)
+    } finally { loadingFin.value = false }
 }
 
-const totalIngresos = () => facturas.value.reduce((sum, f) => sum + (parseFloat(f.monto_total || f.total) || 0), 0)
-const totalGastos = () => gastos.value.reduce((sum, g) => sum + (parseFloat(g.monto_gasto || g.monto) || 0), 0)
+const createGasto = async () => {
+    if (!gastoForm.value.descripcion.trim() || !gastoForm.value.monto) return
+    const contrato = contratosProyecto.value[0]
+    if (!contrato) { displayToast('Se necesita un contrato para registrar gastos', 'error'); return }
+    submittingFin.value = true
+    try {
+        const res = await api.post('/api/gastos', {
+            descripcion_gasto: gastoForm.value.descripcion.trim(),
+            monto_gasto: Number(gastoForm.value.monto),
+            fecha_gasto: gastoForm.value.fecha,
+            id_categoria_gasto: gastoForm.value.id_categoria || null,
+            id_contrato: contrato.id_contrato
+        })
+        gastos.value.push(res.data)
+        gastoForm.value = { descripcion: '', monto: '', fecha: new Date().toISOString().slice(0, 10), id_categoria: null }
+        showGastoForm.value = false
+        displayToast('Gasto registrado', 'success')
+    } catch (e) {
+        displayToast('Error al registrar gasto', 'error')
+    } finally { submittingFin.value = false }
+}
+
+const createFactura = async () => {
+    if (!facturaForm.value.numero.trim() || !facturaForm.value.total) return
+    const contrato = contratosProyecto.value[0]
+    if (!contrato) { displayToast('Se necesita un contrato para crear facturas', 'error'); return }
+    submittingFin.value = true
+    try {
+        const res = await api.post('/api/facturas', {
+            numero_factura: facturaForm.value.numero.trim(),
+            total: Number(facturaForm.value.total),
+            fecha_factura: facturaForm.value.fecha,
+            id_contrato: contrato.id_contrato,
+            cliente_id: contrato.id_cliente || null
+        })
+        facturas.value.push(res.data)
+        facturaForm.value = { numero: '', total: '', fecha: new Date().toISOString().slice(0, 10) }
+        showFacturaForm.value = false
+        displayToast('Factura creada', 'success')
+    } catch (e) {
+        displayToast('Error al crear factura', 'error')
+    } finally { submittingFin.value = false }
+}
+
+const totalIngresos = computed(() =>
+    facturas.value.reduce((sum, f) => sum + (Number(f.total) || 0), 0)
+)
+const totalGastos = computed(() =>
+    gastos.value.reduce((sum, g) => sum + (Number(g.monto_gasto) || 0), 0)
+)
+const totalPagosPersonal = computed(() =>
+    pagosPersonal.value.reduce((sum, p) => sum + (Number(p.monto_pagado) || 0), 0)
+)
+const balance = computed(() => totalIngresos.value - totalGastos.value - totalPagosPersonal.value)
 
 const closeModal = () => {
     visible.value = false
@@ -368,7 +476,7 @@ const closeModal = () => {
             <div class="flex justify-between items-center px-6 pt-6 pb-3 border-b border-gray-100">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">{{ proyecto.nombre_proyecto }}</h2>
-                    <span class="text-sm text-gray-500">ID: #{{ proyecto.id_proyecto }}</span>
+                    <span class="text-sm text-gray-500">ID: #{{ proyecto.id_proyecto }} · {{ proyecto.nombre_tipo || 'Sin tipo' }}</span>
                 </div>
                 <button @click="closeModal" class="cursor-pointer text-gray-500 bg-gray-100 p-2 rounded-lg hover:bg-red-500 hover:text-white transition-all">
                     <Icon icon="mdi:close" width="20" height="20" />
@@ -398,15 +506,22 @@ const closeModal = () => {
                             <span class="text-gray-400">Tipo:</span>
                             <span class="font-medium">{{ proyecto.nombre_tipo || 'Desconocido' }}</span>
                             <span class="text-gray-400">Estado:</span>
-                            <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-bold uppercase w-fit">{{ proyecto.nombre_estado || 'Desconocido' }}</span>
+                            <span :class="['px-2 py-0.5 rounded-full text-xs font-bold uppercase w-fit',
+                                proyecto.nombre_estado === 'Finalizado' ? 'bg-green-100 text-green-700' :
+                                proyecto.nombre_estado === 'Cancelado' ? 'bg-red-100 text-red-700' :
+                                proyecto.nombre_estado === 'En Espera' ? 'bg-gray-100 text-gray-700' :
+                                'bg-yellow-100 text-yellow-700']">
+                                {{ proyecto.nombre_estado || 'Desconocido' }}
+                            </span>
                         </div>
                     </div>
                     <div class="space-y-3">
-                        <h4 class="font-semibold text-gray-700 border-b pb-2">Finanzas y Fechas</h4>
+                        <h4 class="font-semibold text-gray-700 border-b pb-2">Fechas y Presupuesto</h4>
                         <div class="space-y-1 text-sm">
                             <p><span class="text-gray-400">Inicio:</span> {{ formatearFecha(proyecto.fecha_inicio) }}</p>
-                            <p><span class="text-gray-400">Fin Est:</span> {{ formatearFecha(proyecto.fecha_fin_estimada) }}</p>
-                            <p class="pt-2"><span class="text-gray-400">Presupuesto:</span> <span class="text-xl font-bold text-green-600 block">Bs. {{ Number(proyecto.presupuesto).toLocaleString('es-VE') }}</span></p>
+                            <p><span class="text-gray-400">Fin Est.:</span> {{ formatearFecha(proyecto.fecha_fin_estimada) }}</p>
+                            <p v-if="proyecto.fecha_fin"><span class="text-gray-400">Fin Real:</span> {{ formatearFecha(proyecto.fecha_fin) }}</p>
+                            <p class="pt-2"><span class="text-gray-400">Presupuesto:</span> <span class="text-xl font-bold text-green-600 block">Bs. {{ FORMATO_MONEDA(proyecto.presupuesto) }}</span></p>
                         </div>
                     </div>
                 </div>
@@ -439,9 +554,9 @@ const closeModal = () => {
                             </button>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <span v-for="(loc, i) in locAsignadas" :key="i"
+                            <span v-for="loc in locAsignadas" :key="loc.id_locacion"
                                 class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center gap-2 text-sm">
-                                <Icon icon="mdi:map-marker" class="w-4 h-4" /> {{ loc }}
+                                <Icon icon="mdi:map-marker" class="w-4 h-4" /> {{ loc.nombre_locacion }}
                                 <button @click="desasignarLocacion(loc)" class="text-red-500 hover:text-red-700 cursor-pointer">
                                     <Icon icon="mdi:close-circle" class="w-4 h-4" />
                                 </button>
@@ -488,9 +603,9 @@ const closeModal = () => {
                         <div class="flex flex-wrap gap-2">
                             <span v-for="r in recAsignados" :key="r.id_recurso"
                                 class="bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg border border-purple-100 flex items-center gap-2 text-sm">
-                                <Icon icon="mdi:tools" class="w-4 h-4" /> {{ r.nombre_recurso }}
+                                <Icon icon="mdi:tools" class="w-4 h-4" /> {{ r.nombre_equipo }}
                                 <span class="text-xs italic">({{ formatearFechaDos(r.fecha_inicio_uso) }} - {{ formatearFechaDos(r.fecha_fin_uso) }})</span>
-                                <button @click="desasignarRecurso(r.id_recurso, r.nombre_recurso)" class="text-red-500 hover:text-red-700 cursor-pointer">
+                                <button @click="desasignarRecurso(r)" class="text-red-500 hover:text-red-700 cursor-pointer">
                                     <Icon icon="mdi:close-circle" class="w-4 h-4" />
                                 </button>
                             </span>
@@ -521,7 +636,10 @@ const closeModal = () => {
                     <template v-else>
                         <div v-if="showPersForm" class="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 flex gap-2 items-center">
                             <div class="flex-1"><SearchableSelect :options="personalDisponibles" label-key="nombre_personal" sublabel-key="nombre_rol" placeholder="Personal..." v-model="idPersonalSelect" :loading="loadingPersData" /></div>
-                            <input v-model="horasTrab" type="number" min="0" step="0.5" class="w-24 border border-gray-300 rounded text-sm p-2" placeholder="Horas" />
+                            <div class="flex items-center gap-1">
+                                <input v-model="horasTrab" type="number" min="0" step="0.5" class="w-20 border border-gray-300 rounded text-sm p-2" placeholder="Horas" />
+                                <span class="text-xs text-gray-400">hrs</span>
+                            </div>
                             <button @click="asignarPersonal" :disabled="loadingPers" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm hover:bg-indigo-700 transition cursor-pointer disabled:opacity-50">
                                 <Icon v-if="loadingPers" icon="mdi:loading" class="animate-spin w-4 h-4" />
                                 <span v-else>Asignar</span>
@@ -530,14 +648,22 @@ const closeModal = () => {
                         </div>
                         <div v-if="asignacionesPersonal.length" class="space-y-2">
                             <div v-for="a in asignacionesPersonal" :key="a.id_asignacion"
-                                class="bg-indigo-50 text-indigo-800 px-3 py-2 rounded-lg border border-indigo-100 flex items-center justify-between text-sm">
-                                <div>
+                                class="bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 flex items-center justify-between text-sm">
+                                <div class="flex-1">
                                     <p class="font-semibold flex items-center gap-1"><Icon icon="mdi:account" class="w-4 h-4" />{{ a.nombre_personal || `#${a.id_personal}` }}</p>
-                                    <p v-if="a.horas_trabajadas" class="text-xs text-gray-500">Horas: {{ a.horas_trabajadas }}</p>
+                                    <div class="flex gap-4 text-xs text-gray-500 mt-0.5">
+                                        <span>{{ a.nombre_rol || 'Sin rol' }}</span>
+                                        <span v-if="a.salario > 0">Salario: Bs. {{ FORMATO_MONEDA(a.salario) }}/mes</span>
+                                        <span v-if="a.horas_trabajadas > 0">{{ a.horas_trabajadas }} hrs</span>
+                                        <span v-if="a.costo_estimado > 0" class="font-semibold text-indigo-700">Costo est.: Bs. {{ FORMATO_MONEDA(a.costo_estimado) }}</span>
+                                    </div>
                                 </div>
-                                <button @click="desasignarPersonal(a.id_asignacion, a.nombre_personal || `#${a.id_personal}`)" class="text-red-500 hover:text-red-700 cursor-pointer">
+                                <button @click="desasignarPersonal(a.id_asignacion, a.nombre_personal || `#${a.id_personal}`)" class="text-red-500 hover:text-red-700 cursor-pointer ml-2">
                                     <Icon icon="mdi:close-circle" class="w-5 h-5" />
                                 </button>
+                            </div>
+                            <div v-if="totalCostoPersonal > 0" class="text-right text-sm font-semibold text-indigo-700">
+                                Costo total personal: Bs. {{ FORMATO_MONEDA(totalCostoPersonal) }}
                             </div>
                         </div>
                         <div v-else-if="!showPersForm" class="text-gray-400 italic text-sm">Sin personal asignado.</div>
@@ -580,8 +706,8 @@ const closeModal = () => {
                         <div v-for="e in entregables" :key="e.id"
                             class="bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 flex items-center justify-between text-sm">
                             <div v-if="editandoEnt !== e.id" class="flex-1">
-                                <p class="font-semibold text-orange-800">{{ e.titulo }}</p>
-                                <p v-if="e.fecha_entrega" class="text-xs text-gray-500">{{ formatearFecha(e.fecha_entrega) }}</p>
+                                <p class="font-semibold text-orange-800">{{ e.titulo || e.descripcion }}</p>
+                                <p v-if="e.fecha_entrega || e.fecha_entrega_estimada" class="text-xs text-gray-500">{{ formatearFecha(e.fecha_entrega || e.fecha_entrega_estimada) }}</p>
                             </div>
                             <div v-else class="flex-1 flex gap-2">
                                 <input v-model="editEntForm.titulo" type="text" class="flex-1 border border-gray-300 rounded text-sm p-1.5" />
@@ -607,7 +733,7 @@ const closeModal = () => {
                             </div>
                         </div>
                     </div>
-                    <div v-else class="text-gray-400 italic text-sm">Sin entregables registrados.</div>
+                    <div v-else-if="!showEntForm" class="text-gray-400 italic text-sm">Sin entregables registrados.</div>
                 </div>
 
                 <!-- Finanzas -->
@@ -621,23 +747,114 @@ const closeModal = () => {
                         <button @click="cargarFinanzas" class="text-blue-500 underline cursor-pointer text-xs">Reintentar</button>
                     </div>
                     <div v-else>
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div class="bg-green-50 rounded-xl p-4 border border-green-200">
-                                <p class="text-sm text-gray-500">Ingresos Totales</p>
-                                <p class="text-2xl font-bold text-green-600">Bs. {{ totalIngresos().toLocaleString('es-VE') }}</p>
-                                <p class="text-xs text-gray-400">{{ facturas.length }} facturas</p>
-                            </div>
-                            <div class="bg-red-50 rounded-xl p-4 border border-red-200">
-                                <p class="text-sm text-gray-500">Gastos Totales</p>
-                                <p class="text-2xl font-bold text-red-600">Bs. {{ totalGastos().toLocaleString('es-VE') }}</p>
-                                <p class="text-xs text-gray-400">{{ gastos.length }} gastos</p>
+                        <!-- Contrato Card -->
+                        <div v-if="contratosProyecto.length" class="space-y-3">
+                            <div v-for="c in contratosProyecto" :key="c.id_contrato"
+                                class="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-semibold text-blue-900">Contrato #{{ c.id_contrato }}</h5>
+                                    <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{{ c.fecha_firma ? formatearFecha(c.fecha_firma) : 'Sin fecha' }}</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div><span class="text-gray-500">Monto:</span> <span class="font-bold text-blue-800">Bs. {{ FORMATO_MONEDA(c.monto_contrato) }}</span></div>
+                                    <div><span class="text-gray-500">Cliente:</span> {{ c.nombre_cliente || 'N/A' }}</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                            <p class="text-sm font-semibold text-gray-700 mb-2">Balance</p>
-                            <p :class="['text-xl font-bold', (totalIngresos() - totalGastos()) >= 0 ? 'text-green-600' : 'text-red-600']">
-                                Bs. {{ (totalIngresos() - totalGastos()).toLocaleString('es-VE') }}
-                            </p>
+                        <div v-else class="text-gray-400 italic text-sm">Sin contrato vinculado.</div>
+
+                        <!-- Acciones rapidas -->
+                        <div class="flex gap-2">
+                            <button v-if="!showFacturaForm && contratosProyecto.length" @click="showFacturaForm = true"
+                                class="text-xs bg-green-50 text-green-600 px-3 py-1.5 rounded border border-green-200 hover:bg-green-100 transition flex items-center gap-1 cursor-pointer">
+                                <Icon icon="mdi:plus" class="w-3 h-3" /> Crear Factura
+                            </button>
+                            <button v-if="!showGastoForm && contratosProyecto.length" @click="showGastoForm = true"
+                                class="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded border border-red-200 hover:bg-red-100 transition flex items-center gap-1 cursor-pointer">
+                                <Icon icon="mdi:plus" class="w-3 h-3" /> Registrar Gasto
+                            </button>
+                        </div>
+
+                        <!-- Inline Factura Form -->
+                        <div v-if="showFacturaForm" class="bg-green-50/50 p-3 rounded-lg border border-green-100 space-y-2">
+                            <p class="text-xs font-bold text-green-800 uppercase">Nueva Factura</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <input v-model="facturaForm.numero" type="text" class="border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400" placeholder="N° Factura" />
+                                <input v-model="facturaForm.total" type="number" step="0.01" class="border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400" placeholder="Monto total" />
+                                <input v-model="facturaForm.fecha" type="date" class="border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-green-400" />
+                            </div>
+                            <div class="flex gap-2 justify-end">
+                                <button @click="showFacturaForm = false" class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-400 transition cursor-pointer">Cancelar</button>
+                                <button @click="createFactura" :disabled="submittingFin" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition cursor-pointer disabled:opacity-50">
+                                    <Icon v-if="submittingFin" icon="mdi:loading" class="animate-spin w-3 h-3 inline" />
+                                    <span v-else>Guardar</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Inline Gasto Form -->
+                        <div v-if="showGastoForm" class="bg-red-50/50 p-3 rounded-lg border border-red-100 space-y-2">
+                            <p class="text-xs font-bold text-red-800 uppercase">Nuevo Gasto</p>
+                            <div class="grid grid-cols-4 gap-2">
+                                <input v-model="gastoForm.descripcion" type="text" class="col-span-2 border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-red-400" placeholder="Descripcion" />
+                                <input v-model="gastoForm.monto" type="number" step="0.01" class="border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-red-400" placeholder="Monto" />
+                                <select v-model="gastoForm.id_categoria" class="border border-gray-300 rounded text-sm p-2 focus:ring-2 focus:ring-red-400 bg-white">
+                                    <option :value="null">Sin categoria</option>
+                                    <option v-for="cat in categoriasGasto" :key="cat.id_categoria_gasto" :value="cat.id_categoria_gasto">{{ cat.nombre_categoria }}</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2 justify-end">
+                                <button @click="showGastoForm = false" class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-400 transition cursor-pointer">Cancelar</button>
+                                <button @click="createGasto" :disabled="submittingFin" class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition cursor-pointer disabled:opacity-50">
+                                    <Icon v-if="submittingFin" icon="mdi:loading" class="animate-spin w-3 h-3 inline" />
+                                    <span v-else>Guardar</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Facturas List -->
+                        <div v-if="facturas.length" class="space-y-1">
+                            <p class="text-xs font-semibold text-gray-500">Facturas</p>
+                            <div v-for="f in facturas" :key="f.id_factura"
+                                class="bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 flex justify-between text-xs">
+                                <span>{{ f.numero_factura || '#'+f.id_factura }}</span>
+                                <span class="font-semibold text-green-700">Bs. {{ FORMATO_MONEDA(f.total) }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Gastos List -->
+                        <div v-if="gastos.length" class="space-y-1">
+                            <p class="text-xs font-semibold text-gray-500">Gastos</p>
+                            <div v-for="g in gastos" :key="g.id_gasto"
+                                class="bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex justify-between text-xs">
+                                <span>{{ g.descripcion_gasto }}</span>
+                                <span class="font-semibold text-red-700">Bs. {{ FORMATO_MONEDA(g.monto_gasto) }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div class="bg-green-50 rounded-xl p-3 border border-green-200">
+                                <p class="text-xs text-gray-500">Ingresos</p>
+                                <p class="text-lg font-bold text-green-600">Bs. {{ FORMATO_MONEDA(totalIngresos) }}</p>
+                                <p class="text-xs text-gray-400">{{ facturas.length }} fact.</p>
+                            </div>
+                            <div class="bg-red-50 rounded-xl p-3 border border-red-200">
+                                <p class="text-xs text-gray-500">Gastos</p>
+                                <p class="text-lg font-bold text-red-600">Bs. {{ FORMATO_MONEDA(totalGastos) }}</p>
+                                <p class="text-xs text-gray-400">{{ gastos.length }} gastos</p>
+                            </div>
+                            <div class="bg-indigo-50 rounded-xl p-3 border border-indigo-200">
+                                <p class="text-xs text-gray-500">Costo Personal</p>
+                                <p class="text-lg font-bold text-indigo-600">Bs. {{ FORMATO_MONEDA(totalCostoPersonal) }}</p>
+                                <p class="text-xs text-gray-400">{{ asignacionesPersonal.length }} pers.</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                                <p class="text-sm font-semibold text-gray-700">Balance</p>
+                                <p :class="['text-lg font-bold', balance >= 0 ? 'text-green-600' : 'text-red-600']">
+                                    Bs. {{ FORMATO_MONEDA(balance) }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

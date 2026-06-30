@@ -35,13 +35,13 @@
                             <span class="font-normal">{{ persona.rol || 'Sin rol' }}</span>
                         </span>
                         <span class="block text-gray-500 font-semibold text-sm mb-2">
-                            Cédula: {{ persona.cedulapersonal }}
+                            ID: {{ persona.tipoIdentificacion || 'V' }}-{{ persona.cedulapersonal }}
                         </span>
                         <span class="block text-gray-500 font-semibold text-sm mb-2">
                             Correo: {{ persona.emailpersonal || '—' }}
                         </span>
                         <span class="block text-gray-500 font-semibold text-sm mb-2">
-                            Teléfono: {{ persona.telefono || '—' }}
+                            Teléfono: {{ persona.telefono || '—' }}{{ persona.prefijoTelefono ? ' (' + persona.prefijoTelefono + ')' : '' }}
                         </span>
                         <span class="block text-gray-500 font-semibold text-sm mb-2">
                             Salario:
@@ -82,7 +82,7 @@
                     <span class="font-medium text-gray-600">Nombre:</span> {{ detallesActual.nombrepersonal }}
                 </div>
                 <div>
-                    <span class="font-medium text-gray-600">Cédula:</span> {{ detallesActual.cedulapersonal }}
+                    <span class="font-medium text-gray-600">ID:</span> {{ detallesActual.tipoIdentificacion || 'V' }}-{{ detallesActual.cedulapersonal }}
                 </div>
                 <div>
                     <span class="font-medium text-gray-600">Rol (ID):</span>
@@ -96,7 +96,7 @@
                     <span class="font-medium text-gray-600">Correo:</span> {{ detallesActual.emailpersonal }}
                 </div>
                 <div>
-                    <span class="font-medium text-gray-600">Teléfono:</span> {{ detallesActual.telefono }}
+                    <span class="font-medium text-gray-600">Teléfono:</span> {{ detallesActual.telefono || '—' }}{{ detallesActual.prefijoTelefono ? ' (' + detallesActual.prefijoTelefono + ')' : '' }}
                 </div>
             </div>
         </Modal>
@@ -113,9 +113,15 @@
                         type="text" />
                 </div>
                 <div class="mb-4">
-                    <label class="text-sm font-semibold text-gray-500 mb-1">Cédula</label>
-                    <input v-model="nuevoPersonal.cedulapersonal" required class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-                        type="text" />
+                    <label class="text-sm font-semibold text-gray-500 mb-1">Identificación</label>
+                    <div class="flex gap-2">
+                        <select v-model="nuevoPersonal.tipoIdentificacion" class="w-16 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                            <option value="V">V</option>
+                            <option value="J">J</option>
+                            <option value="E">E</option>
+                        </select>
+                        <input v-model="nuevoPersonal.cedulapersonal" required class="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" type="text" placeholder="12345678-9" />
+                    </div>
                 </div>
                 <div class="mb-4">
                     <label class="text-sm font-semibold text-gray-500 mb-1">Rol</label>
@@ -138,7 +144,12 @@
                 </div>
                 <div class="mb-4">
                     <label class="text-sm font-semibold text-gray-500 mb-1">Teléfono</label>
-                    <input v-model="nuevoPersonal.telefono" class="transition w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" type="text" />
+                    <div class="flex gap-2">
+                        <select v-model="nuevoPersonal.prefijoTelefono" class="w-20 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                            <option v-for="p in prefijos" :key="p" :value="p">{{ p }}</option>
+                        </select>
+                        <input v-model="nuevoPersonal.telefono" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400" type="text" placeholder="1234567" />
+                    </div>
                 </div>
 
                 <button type="submit" class="w-full flex items-center text-center justify-center cursor-pointer bg-green-500 hover:bg-green-600 text-white font-semibold px-2 py-1 rounded-lg transition-colors">
@@ -198,6 +209,8 @@ const toastType = ref('success')
 const personal = ref([])
 // Lista de roles
 const roles = ref([])
+// Prefijos telefonicos
+const prefijos = ['0412', '0414', '0416', '0424', '0426', '0212', '0241', '0243', '0251', '0261']
 
 // Estado de modales
 const modalNuevoPersonal = ref(false)
@@ -211,21 +224,25 @@ const detallesActual = ref({
     idpersonal: null,
     nombrepersonal: '',
     cedulapersonal: '',
+    tipoIdentificacion: 'V',
     rol: '',
     idrol: null,
     salario: '',
     emailpersonal: '',
-    telefono: ''
+    telefono: '',
+    prefijoTelefono: ''
 })
 
 // Datos de formulario
 const nuevoPersonal = ref({
     nombrepersonal: '',
     cedulapersonal: '',
+    tipoIdentificacion: 'V',
     idrol: '',
     salario: '',
     emailpersonal: '',
-    telefono: ''
+    telefono: '',
+    prefijoTelefono: '0412'
 })
 
 const esEdicion = computed(() => personaEditandoId.value !== null)
@@ -247,24 +264,34 @@ const displayToast = (message, type) => {
 }
 
 // Mapeo BD -> UI
-const mapBackendToLocal = (p) => ({
-    idpersonal: p.id_personal,
-    nombrepersonal: p.nombre_personal,
-    cedulapersonal: p.cedula_personal,
-    idrol: p.id_rol,
-    rol: p.nombre_rol || '',
-    salario: p.salario,
-    emailpersonal: p.email_personal,
-    telefono: p.telefono
-})
+const mapBackendToLocal = (p) => {
+    const telefono = p.telefono || ''
+    const phoneParts = telefono.match(/^(\d{4})(\d{7})$/)
+    const cedula = p.cedula_personal || ''
+    const cedParts = cedula.match(/^([VJE])-(\d{6,9}-\d)?$/)
+    return {
+        idpersonal: p.id_personal,
+        nombrepersonal: p.nombre_personal,
+        cedulapersonal: cedParts ? cedParts[2] : cedula,
+        tipoIdentificacion: cedParts ? cedParts[1] : (p.tipo_identificacion || 'V'),
+        idrol: p.id_rol,
+        rol: p.nombre_rol || '',
+        salario: p.salario,
+        emailpersonal: p.email_personal,
+        telefono: phoneParts ? phoneParts[2] : telefono,
+        prefijoTelefono: phoneParts ? phoneParts[1] : (p.prefijo_telefono || '')
+    }
+}
 
 const limpiarCampos = () => {
     nuevoPersonal.value.nombrepersonal = ''
     nuevoPersonal.value.cedulapersonal = ''
+    nuevoPersonal.value.tipoIdentificacion = 'V'
     nuevoPersonal.value.idrol = ''
     nuevoPersonal.value.salario = ''
     nuevoPersonal.value.emailpersonal = ''
     nuevoPersonal.value.telefono = ''
+    nuevoPersonal.value.prefijoTelefono = '0412'
 }
 
 // Cargar personal
@@ -306,10 +333,12 @@ const abrirNuevoPersonal = () => {
     nuevoPersonal.value = {
         nombrepersonal: '',
         cedulapersonal: '',
+        tipoIdentificacion: 'V',
         idrol: '',
         salario: '',
         emailpersonal: '',
-        telefono: ''
+        telefono: '',
+        prefijoTelefono: '0412'
     }
     modalNuevoPersonal.value = true
 }
@@ -319,11 +348,13 @@ const editarPersonal = (persona) => {
     personaEditandoId.value = persona.idpersonal
     nuevoPersonal.value = {
         nombrepersonal: persona.nombrepersonal,
-        cedulapersonal: persona.cedulapersonal,
+        cedulapersonal: persona.cedulapersonal || '',
+        tipoIdentificacion: persona.tipoIdentificacion || 'V',
         idrol: persona.idrol,
         salario: persona.salario || '',
         emailpersonal: persona.emailpersonal || '',
-        telefono: persona.telefono || ''
+        telefono: persona.telefono || '',
+        prefijoTelefono: persona.prefijoTelefono || '0412'
     }
     showModal.value = true
 }
@@ -337,13 +368,17 @@ const guardarPersonal = async () => {
         return
     }
 
+    const cedulaCompleta = (p.tipoIdentificacion || 'V') + '-' + p.cedulapersonal.trim()
+    const telefonoCompleto = p.telefono.trim() ? (p.prefijoTelefono || '0412') + p.telefono.trim() : ''
     const payload = {
         nombre_personal: p.nombrepersonal,
-        cedula_personal: p.cedulapersonal,
+        cedula_personal: cedulaCompleta,
+        tipo_identificacion: p.tipoIdentificacion || 'V',
         id_rol: p.idrol,
         salario: p.salario,
         email_personal: p.emailpersonal,
-        telefono: p.telefono
+        telefono: telefonoCompleto || null,
+        prefijo_telefono: p.telefono.trim() ? (p.prefijoTelefono || null) : null
     }
 
     try {

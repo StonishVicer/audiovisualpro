@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js'
 import { FacturaModel } from '../models/factura.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
+import { MonedaService } from './monedaService.js'
 
 export const FacturaService = {
     async getAll() {
@@ -14,7 +15,7 @@ export const FacturaService = {
     },
 
     async create(facturaData) {
-        const { numero_factura, fecha_factura, contrato_id, items, subtotal, total, estado, notas } = facturaData
+        const { numero_factura, fecha_factura, contrato_id, items, subtotal, total, estado, notas, id_moneda, moneda } = facturaData
         const clienteId = parseInt(facturaData.cliente_id)
         const contratoId = contrato_id ? parseInt(contrato_id) : null
         const subtotalF = parseFloat(subtotal) || 0
@@ -24,13 +25,18 @@ export const FacturaService = {
             throw new ValidationError('Faltan campos obligatorios de la factura')
         }
 
+        const monedaCode = moneda || 'USD'
+        const monedaId = id_moneda ? parseInt(id_moneda) : await MonedaService.getIdMonedaPorCodigo(monedaCode)
+        const { monto_usd, monto_ves } = await MonedaService.guardarConAmbasMonedas(totalF, monedaCode, fecha_factura)
+
         const client = await pool.connect()
         try {
             await client.query('BEGIN')
 
             const resFact = await FacturaModel.createWithItems(client, {
                 numero_factura, fecha_factura, cliente_id: clienteId,
-                id_contrato: contratoId, subtotal: subtotalF, total: totalF, estado, notas
+                id_contrato: contratoId, subtotal: subtotalF, total: totalF, estado, notas,
+                id_moneda: monedaId, monto_usd, monto_ves
             })
 
             const newFactura = resFact.rows[0]
@@ -52,11 +58,15 @@ export const FacturaService = {
     },
 
     async update(id, facturaData) {
-        const { numero_factura, fecha_factura, contrato_id, items, subtotal, total, estado, notas } = facturaData
+        const { numero_factura, fecha_factura, contrato_id, items, subtotal, total, estado, notas, id_moneda, moneda } = facturaData
         const clienteId = parseInt(facturaData.cliente_id)
         const contratoId = contrato_id ? parseInt(contrato_id) : null
         const subtotalF = parseFloat(subtotal) || 0
         const totalF = parseFloat(total) || 0
+
+        const monedaCode = moneda || 'USD'
+        const monedaId = id_moneda ? parseInt(id_moneda) : await MonedaService.getIdMonedaPorCodigo(monedaCode)
+        const { monto_usd, monto_ves } = await MonedaService.guardarConAmbasMonedas(totalF, monedaCode, fecha_factura)
 
         const client = await pool.connect()
         try {
@@ -64,7 +74,8 @@ export const FacturaService = {
 
             const result = await FacturaModel.update(client, id, {
                 numero_factura, fecha_factura, cliente_id: clienteId,
-                id_contrato: contratoId, subtotal: subtotalF, total: totalF, estado, notas
+                id_contrato: contratoId, subtotal: subtotalF, total: totalF, estado, notas,
+                id_moneda: monedaId, monto_usd, monto_ves
             })
 
             if (result.rows.length === 0) {

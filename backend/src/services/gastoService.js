@@ -1,5 +1,6 @@
 import { GastoModel, CategoriaGastoModel, PagoModel } from '../models/gasto.js'
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js'
+import { MonedaService } from './monedaService.js'
 
 export const GastoService = {
     async findAll() {
@@ -14,14 +15,29 @@ export const GastoService = {
     },
 
     async create(data) {
-        const result = await GastoModel.create(data)
+        const monedaCode = data.moneda || 'USD'
+        const montoGasto = parseFloat(data.monto_gasto) || 0
+        const fecha = data.fecha_gasto || new Date().toISOString().split('T')[0]
+        const { monto_usd, monto_ves } = await MonedaService.guardarConAmbasMonedas(montoGasto, monedaCode, fecha)
+        const monedaId = data.id_moneda ? parseInt(data.id_moneda) : await MonedaService.getIdMonedaPorCodigo(monedaCode)
+
+        const enriched = { ...data, id_moneda: monedaId, monto_usd, monto_ves, monto_gasto: montoGasto }
+        const result = await GastoModel.create(enriched)
         return result.rows[0]
     },
 
     async update(id, data) {
         const existing = await GastoModel.findById(id)
         if (existing.rows.length === 0) throw new NotFoundError('Gasto no encontrado')
-        const result = await GastoModel.update(id, data)
+
+        const monedaCode = data.moneda || 'USD'
+        const montoGasto = parseFloat(data.monto_gasto) || 0
+        const fecha = data.fecha_gasto || existing.rows[0].fecha_gasto || new Date().toISOString().split('T')[0]
+        const { monto_usd, monto_ves } = await MonedaService.guardarConAmbasMonedas(montoGasto, monedaCode, fecha)
+        const monedaId = data.id_moneda ? parseInt(data.id_moneda) : await MonedaService.getIdMonedaPorCodigo(monedaCode)
+
+        const enriched = { ...data, id_moneda: monedaId, monto_usd, monto_ves, monto_gasto: montoGasto }
+        const result = await GastoModel.update(id, enriched)
         return result.rows[0]
     },
 
@@ -87,14 +103,29 @@ export const PagoService = {
     },
 
     async create(data) {
-        const result = await PagoModel.create(data)
+        const monedaCode = data.moneda || 'USD'
+        const montoPagado = parseFloat(data.monto_pagado) || 0
+        const fecha = data.fecha_pago || new Date().toISOString().split('T')[0]
+        const { monto_usd, monto_ves } = await MonedaService.guardarConAmbasMonedas(montoPagado, monedaCode, fecha)
+        const monedaId = data.id_moneda ? parseInt(data.id_moneda) : await MonedaService.getIdMonedaPorCodigo(monedaCode)
+
+        const enriched = { ...data, id_moneda: monedaId, monto_usd, monto_ves, monto_pagado: montoPagado }
+        const result = await PagoModel.create(enriched)
         return result.rows[0]
     },
 
     async update(id, data) {
         const existing = await PagoModel.findById(id)
         if (existing.rows.length === 0) throw new NotFoundError('Pago no encontrado')
-        const result = await PagoModel.update(id, data)
+
+        const monedaCode = data.moneda || 'USD'
+        const montoPagado = parseFloat(data.monto_pagado) || 0
+        const fecha = data.fecha_pago || existing.rows[0].fecha_pago || new Date().toISOString().split('T')[0]
+        const { monto_usd, monto_ves } = await MonedaService.guardarConAmbasMonedas(montoPagado, monedaCode, fecha)
+        const monedaId = data.id_moneda ? parseInt(data.id_moneda) : await MonedaService.getIdMonedaPorCodigo(monedaCode)
+
+        const enriched = { ...data, id_moneda: monedaId, monto_usd, monto_ves, monto_pagado: montoPagado }
+        const result = await PagoModel.update(id, enriched)
         return result.rows[0]
     },
 

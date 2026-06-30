@@ -27,16 +27,6 @@ const menus = [
         name: 'Finanzas',
         icon: 'material-symbols:paid',
         route: '/system/finanzas'
-    },
-    {
-        name: 'Chat',
-        icon: 'material-symbols:chat',
-        route: '/system/chat'
-    },
-    {
-        name: 'Configuracion',
-        icon: 'material-symbols:settings',
-        route: '/system/configuracion'
     }
 ]
 

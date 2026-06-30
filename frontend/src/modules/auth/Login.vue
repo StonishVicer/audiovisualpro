@@ -105,21 +105,6 @@ const togglePasswordVisibility = () => {
                     </button>
                 </form>
             </div>
-            
-            <div class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-lg p-8 border border-green-100">
-                <h1 class="text-center mb-4 font-bold text-green-600 text-xl">Chatear</h1>
-
-                <p class="text-center mb-4 font-semibold text-gray-500 text-lg">
-                    En este apartado, podra chatear en tiempo real con el administrador del sistema para asi poder discutir sobre proyectos, sugerencias, etc.
-                </p>
-
-                <RouterLink
-                    to="/client/chat"
-                    class="cursor-pointer mt-2 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg transition-colors text-center"
-                >
-                    Chatear
-                </RouterLink>
-            </div>
         </div>
 
         <Toast

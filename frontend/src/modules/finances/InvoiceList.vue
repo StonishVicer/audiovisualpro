@@ -20,6 +20,7 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <CurrencySelector />
             <button @click="getFacturas" class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Refrescar">
                 <Icon icon="material-symbols:refresh" width="24" height="24" />
             </button>
@@ -61,7 +62,7 @@
                       {{ fact.nombre_proyecto || 'Sin proyecto asignado' }}
                     </div>
                 </td>
-                <td class="px-6 py-4 text-right font-bold text-green-700">${{ Number(fact.total).toFixed(2) }}</td>
+                <td class="px-6 py-4 text-right font-bold text-green-700">{{ getMontoDisplay(fact) }}</td>
                 <td class="px-6 py-4 text-center">
                   <span :class="{
                     'bg-yellow-100 text-yellow-800': fact.estado === 'PENDIENTE',
@@ -86,7 +87,7 @@
                        <h4 class="font-bold text-gray-700 mb-2 border-b pb-2 text-xs uppercase">Items Facturados</h4>
                        <div v-for="it in fact.items || []" :key="it.id_item" class="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
                           <span>{{ it.descripcion }} <span class="text-gray-400 text-xs">x{{ it.cantidad }}</span></span>
-                          <span class="font-medium">${{ (Number(it.cantidad)*Number(it.precio_unitario)).toFixed(2) }}</span>
+                           <span class="font-medium">{{ getMontoDisplay({ monto_usd: Number(it.cantidad)*Number(it.precio_unitario), monto_ves: Number(it.cantidad)*Number(it.precio_unitario) }) }}</span>
                        </div>
                     </div>
                  </td>
@@ -159,7 +160,7 @@
                    <div class="col-span-2 text-right">
                      <label class="text-[10px] text-gray-500 uppercase font-bold block">Subtotal</label>
                      <div class="font-bold text-gray-700 text-sm py-1">
-                        ${{ (Number(it.cantidad || 1) * Number(it.precio_unitario)).toFixed(2) }}
+                        {{ getMontoDisplay({ monto_usd: (Number(it.cantidad || 1) * Number(it.precio_unitario)), monto_ves: (Number(it.cantidad || 1) * Number(it.precio_unitario)) }) }}
                      </div>
                    </div>
                  </div>
@@ -170,15 +171,15 @@
           
           <div class="flex justify-end">
             <div class="w-full md:w-1/2 bg-gray-50 p-4 rounded-xl">
-               <div class="flex justify-between text-sm mb-1">
-                 <span class="text-gray-500">Subtotal:</span>
-                 <span class="font-medium">${{ subtotal.toFixed(2) }}</span>
-               </div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-gray-500">Subtotal:</span>
+                  <span class="font-medium">{{ getMontoDisplay({ monto_usd: subtotal, monto_ves: subtotal }) }}</span>
+                </div>
 
-               <div class="flex justify-between text-xl font-bold text-green-700 border-t border-gray-200 pt-2">
-                 <span>Total a Pagar:</span>
-                 <span>${{ total.toFixed(2) }}</span>
-               </div>
+                <div class="flex justify-between text-xl font-bold text-green-700 border-t border-gray-200 pt-2">
+                  <span>Total a Pagar:</span>
+                  <span>{{ getMontoDisplay({ monto_usd: total, monto_ves: total }) }}</span>
+                </div>
             </div>
           </div>
 
@@ -199,7 +200,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import Modal from '../../components/Modal.vue'
+import CurrencySelector from '../../components/CurrencySelector.vue'
 import api from '../../services/api.js'
+import { useCurrency } from '../../composables/useCurrency.js'
+
+const { getMontoDisplay, getMontoNumber } = useCurrency()
 
 // --- Estados ---
 const facturas = ref([])

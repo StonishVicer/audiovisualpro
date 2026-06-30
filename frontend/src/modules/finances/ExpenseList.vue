@@ -20,6 +20,7 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <CurrencySelector />
             <button @click="getGastos" class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Refrescar">
                 <Icon icon="material-symbols:refresh" width="24" height="24" />
             </button>
@@ -65,7 +66,7 @@
                     {{ gasto.descripcion_gasto }}
                 </td>
                 <td class="px-6 py-4 text-right font-bold text-gray-700">
-                    ${{ Number(gasto.monto_gasto).toFixed(2) }}
+                    {{ getMontoDisplay(gasto) }}
                 </td>
                 <td class="px-6 py-4 flex justify-center gap-2">
                    <button @click="openEdit(gasto)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Editar">
@@ -147,7 +148,11 @@ import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
+import CurrencySelector from '../../components/CurrencySelector.vue'
 import api from '../../services/api.js'
+import { useCurrency } from '../../composables/useCurrency.js'
+
+const { getMontoDisplay, getMontoNumber } = useCurrency()
 
 // States
 const gastos = ref([])

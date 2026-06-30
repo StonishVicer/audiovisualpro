@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps({
@@ -7,24 +8,28 @@ const props = defineProps({
     estadoProyecto: { type: String, required: true, default: 'Estado del Proyecto' },
     fechaInicio: { type: String, required: true, default: '' },
     fechaFinEstimada: { type: String, required: true, default: ''},
-    presupuesto: { type: Number, required: true, default: 0 },
-    locacionesAsignadas: { type: Array, required: false, default: () => [] },
-    recursosAsignados: { type: Array, required: false, default: () => [] }
+    presupuesto: { type: Number, required: true, default: 0 }
 })
 
 const emit = defineEmits(['verDetalles', 'editar', 'eliminar'])
 
-const eliminarProyecto = () => {
-    emit('eliminar')
-}
+const eliminarProyecto = () => { emit('eliminar') }
+const editarProyecto = () => { emit('editar') }
+const verDetalles = () => { emit('verDetalles') }
 
-const editarProyecto = () => {
-    emit('editar')
-}
-
-const verDetalles = () => {
-    emit('verDetalles')
-}
+const estadoBadge = computed(() => {
+    const estado = (props.estadoProyecto || '').toLowerCase()
+    if (estado.includes('progreso') || estado.includes('curso') || estado.includes('activo')) {
+        return { class: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'En Progreso' }
+    }
+    if (estado.includes('finalizado') || estado.includes('completado')) {
+        return { class: 'bg-green-100 text-green-800 border-green-200', label: 'Finalizado' }
+    }
+    if (estado.includes('cancelado') || estado.includes('suspendido')) {
+        return { class: 'bg-red-100 text-red-800 border-red-200', label: 'Cancelado' }
+    }
+    return { class: 'bg-gray-100 text-gray-700 border-gray-200', label: props.estadoProyecto }
+})
 </script>
 
 <template>
@@ -48,30 +53,9 @@ const verDetalles = () => {
 
                     <div class="text-sm mt-2">
                         <p class="font-bold text-gray-700 mb-1">Estado:</p>
-
-                        <div
-                            v-if="locacionesAsignadas?.length > 0 && recursosAsignados?.length > 0"
-                            class="flex items-center gap-1 p-2 rounded bg-green-100 text-green-700 text-sm font-medium"
-                        >
-                            <Icon icon="mdi:check-circle-outline" width="18" height="18" />
-                            Todo está bien.
-                        </div>
-
-                        <div
-                            v-else
-                            class="flex flex-col gap-1 p-2 rounded bg-red-100 text-red-700 text-sm font-medium border border-red-300"
-                        >
-                            <div class="flex items-center font-bold">
-                                <Icon icon="mdi:alert-circle-outline" width="18" height="18" class="mr-1" />
-                                Detalles:
-                            </div>
-                            <ul class="list-disc list-inside ml-2 text-xs">
-                                <li v-if="locacionesAsignadas?.length === 0">Asignar al menos una locación.</li>
-
-                                <li v-if="recursosAsignados?.length === 0">Asignar al menos un recurso técnico.</li>
-                            </ul>
-                            <p class="font-bold">Vaya a 'Ver Detalles' para asi poder asignarlos.</p>
-                        </div>
+                        <span :class="['px-3 py-1.5 rounded-full text-xs font-semibold border', estadoBadge.class]">
+                            {{ estadoBadge.label }}
+                        </span>
                     </div>
                 </div>
             </div>

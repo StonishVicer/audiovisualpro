@@ -88,27 +88,83 @@ WHERE NOT EXISTS (
 );
 
 -- ============================================================
--- 6. Crear tablas para CHAT PERSISTENTE
+-- 6. Tablas para SISTEMA BIMONETARIO
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS chat_rooms (
-    id_room SERIAL PRIMARY KEY,
-    id_proyecto INTEGER REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
-    id_cliente INTEGER REFERENCES clientes(id_cliente) ON DELETE CASCADE,
-    nombre_room VARCHAR(100),
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS monedas (
+    id_moneda SERIAL PRIMARY KEY,
+    codigo VARCHAR(10) NOT NULL UNIQUE,
+    nombre VARCHAR(50) NOT NULL,
+    simbolo VARCHAR(5)
 );
 
-CREATE TABLE IF NOT EXISTS chat_messages (
-    id_mensaje SERIAL PRIMARY KEY,
-    id_room INTEGER REFERENCES chat_rooms(id_room) ON DELETE CASCADE,
-    sender_type VARCHAR(10) CHECK (sender_type IN ('admin', 'client')),
-    sender_id INTEGER NOT NULL,
-    mensaje TEXT NOT NULL,
-    timestamp TIMESTAMP DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS tipos_cambio (
+    id_tipo_cambio SERIAL PRIMARY KEY,
+    fecha DATE NOT NULL,
+    id_moneda_base INTEGER NOT NULL REFERENCES monedas(id_moneda),
+    id_moneda_destino INTEGER NOT NULL REFERENCES monedas(id_moneda),
+    valor NUMERIC(14,4) NOT NULL,
+    fuente VARCHAR(100) DEFAULT 'Manual',
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (fecha, id_moneda_base, id_moneda_destino)
 );
 
--- Índice para búsqueda rápida de mensajes por sala
-CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(id_room, timestamp);
+INSERT INTO monedas (id_moneda, codigo, nombre, simbolo) VALUES
+    (1, 'USD', 'Dolar estadounidense', '$'),
+    (2, 'VES', 'Bolivar digital', 'Bs.')
+ON CONFLICT (id_moneda) DO NOTHING;
+
+-- ============================================================
+-- 7. Constraints UNIQUE y datos maestros de catalogos
+-- ============================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_tipos_proyecto_nombre') THEN
+        ALTER TABLE tipos_proyecto ADD CONSTRAINT uq_tipos_proyecto_nombre UNIQUE (nombre_tipo);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_estados_proyecto_nombre') THEN
+        ALTER TABLE estados_proyecto ADD CONSTRAINT uq_estados_proyecto_nombre UNIQUE (nombre_estado);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_roles_personal_nombre') THEN
+        ALTER TABLE roles_personal ADD CONSTRAINT uq_roles_personal_nombre UNIQUE (nombre_rol);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_tipos_recurso_nombre') THEN
+        ALTER TABLE tipos_recurso ADD CONSTRAINT uq_tipos_recurso_nombre UNIQUE (nombre_tipo);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_categorias_gasto_nombre') THEN
+        ALTER TABLE categorias_gasto ADD CONSTRAINT uq_categorias_gasto_nombre UNIQUE (nombre_categoria);
+    END IF;
+END $$;
+
+INSERT INTO tipos_proyecto (nombre_tipo) VALUES
+    ('Comercial'),('Corporativo'),('Eventos'),('Educativo'),('Documental'),('Ficcion'),('Otro')
+ON CONFLICT (nombre_tipo) DO NOTHING;
+
+INSERT INTO estados_proyecto (nombre_estado) VALUES
+    ('En Progreso'),('Finalizado'),('Cancelado'),('En Espera')
+ON CONFLICT (nombre_estado) DO NOTHING;
+
+INSERT INTO roles_personal (nombre_rol) VALUES
+    ('Director'),('Productor'),('Camarografo'),('Editor'),('Sonidista'),('Disenador Grafico'),('Asistente'),('Otro')
+ON CONFLICT (nombre_rol) DO NOTHING;
+
+INSERT INTO tipos_recurso (nombre_tipo) VALUES
+    ('Camara'),('Iluminacion'),('Sonido'),('Postproduccion'),('Transporte'),('Otro')
+ON CONFLICT (nombre_tipo) DO NOTHING;
+
+INSERT INTO categorias_gasto (nombre_categoria) VALUES
+    ('Transporte'),('Comida'),('Reservaciones'),('Materiales'),('Equipos'),('Personal'),('Otros')
+ON CONFLICT (nombre_categoria) DO NOTHING;
+
+-- ============================================================
+-- 8. Columnas adicionales (clientes + personal)
+-- ============================================================
+
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tipo_identificacion VARCHAR(1) DEFAULT 'V';
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS prefijo_telefono VARCHAR(5);
+ALTER TABLE personal ADD COLUMN IF NOT EXISTS prefijo_telefono VARCHAR(5);
+ALTER TABLE personal ADD COLUMN IF NOT EXISTS tipo_identificacion VARCHAR(1) DEFAULT 'V';
+ALTER TABLE personal ALTER COLUMN cedula_personal TYPE VARCHAR(20);
 
 COMMIT;

@@ -5,8 +5,8 @@ export const ContratoModel = {
         return pool.query(`
             SELECT c.*, cli.nombre_cliente, cli.rif_cliente, pro.nombre_proyecto
             FROM contratos c
-            INNER JOIN clientes cli ON c.id_cliente = cli.id_cliente
-            INNER JOIN proyectos pro ON c.id_proyecto = pro.id_proyecto
+            LEFT JOIN clientes cli ON c.id_cliente = cli.id_cliente
+            LEFT JOIN proyectos pro ON c.id_proyecto = pro.id_proyecto
             ORDER BY c.id_contrato DESC
         `)
     },

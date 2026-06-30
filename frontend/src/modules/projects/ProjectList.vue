@@ -64,9 +64,7 @@ const getProyectos = async () => {
             return {
                 ...proyecto,
                 nombre_cliente: contratoAsociado ? contratoAsociado.nombre_cliente : null,
-                id_cliente: contratoAsociado ? contratoAsociado.id_cliente : null,
-                lista_locaciones: Array.isArray(proyecto.lista_locaciones) ? proyecto.lista_locaciones : [],
-                recursos_asignados: Array.isArray(proyecto.recursos_asignados) ? proyecto.recursos_asignados : []
+                id_cliente: contratoAsociado ? contratoAsociado.id_cliente : null
             }
         })
     } catch (err) {
@@ -170,8 +168,6 @@ onMounted(() => {
                         :fechaInicio="formatearFecha(proyecto.fecha_inicio)"
                         :fechaFinEstimada="formatearFecha(proyecto.fecha_fin_estimada)"
                         :presupuesto="Number(proyecto.presupuesto)"
-                        :locacionesAsignadas="proyecto.lista_locaciones"
-                        :recursosAsignados="proyecto.recursos_asignados"
                         @verDetalles="abrirDetalles(proyecto)"
                         @editar="editarProyecto(proyecto)"
                         @eliminar="requestDelete(proyecto.id_proyecto)" />

@@ -80,7 +80,8 @@ export const ProyectoService = {
                  JOIN tipos_recurso tr ON r.id_tipo_recurso = tr.id_tipo_recurso
                  WHERE ur.id_proyecto = $1`, [id]),
             pool.query(
-                `SELECT ap.id_asignacion, ap.id_personal, p.nombre_personal, rp.nombre_rol, ap.horas_trabajadas
+                `SELECT ap.id_asignacion, ap.id_personal, p.nombre_personal, rp.nombre_rol,
+                        ap.horas_trabajadas, p.salario, p.cedula_personal, p.telefono, p.email_personal
                  FROM asignacion_personal ap
                  JOIN personal p ON ap.id_personal = p.id_personal
                  LEFT JOIN roles_personal rp ON p.id_rol = rp.id_rol
@@ -177,11 +178,11 @@ export const ProyectoService = {
                     if (pers.id_personal) {
                         idPersonal = pers.id_personal
                     } else if (pers.nuevo) {
-                        const { nombre_personal, cedula, id_rol, salario, email, telefono } = pers.nuevo
+                        const { nombre_personal, cedula, tipo_identificacion, id_rol, salario, email, telefono, prefijo_telefono } = pers.nuevo
                         const persResult = await client.query(
-                            `INSERT INTO personal (nombre_personal, cedula_personal, id_rol, salario, email_personal, telefono)
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id_personal`,
-                            [nombre_personal, cedula, Number(id_rol) || null, Number(salario) || 0, email, telefono]
+                            `INSERT INTO personal (nombre_personal, cedula_personal, tipo_identificacion, id_rol, salario, email_personal, telefono, prefijo_telefono)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_personal`,
+                            [nombre_personal, cedula, tipo_identificacion || 'V', Number(id_rol) || null, Number(salario) || 0, email, telefono, prefijo_telefono || null]
                         )
                         idPersonal = persResult.rows[0].id_personal
                     }
@@ -297,11 +298,11 @@ export const ProyectoService = {
                     if (pers.id_personal) {
                         idPersonal = pers.id_personal
                     } else if (pers.nuevo) {
-                        const { nombre_personal, cedula, id_rol, salario, email, telefono } = pers.nuevo
+                        const { nombre_personal, cedula, tipo_identificacion, id_rol, salario, email, telefono, prefijo_telefono } = pers.nuevo
                         const persResult = await client.query(
-                            `INSERT INTO personal (nombre_personal, cedula_personal, id_rol, salario, email_personal, telefono)
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id_personal`,
-                            [nombre_personal, cedula, Number(id_rol) || null, Number(salario) || 0, email, telefono]
+                            `INSERT INTO personal (nombre_personal, cedula_personal, tipo_identificacion, id_rol, salario, email_personal, telefono, prefijo_telefono)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_personal`,
+                            [nombre_personal, cedula, tipo_identificacion || 'V', Number(id_rol) || null, Number(salario) || 0, email, telefono, prefijo_telefono || null]
                         )
                         idPersonal = persResult.rows[0].id_personal
                     }

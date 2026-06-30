@@ -11,7 +11,7 @@ import { Icon } from '@iconify/vue'
             </a>
             <nav>
             	<RouterLink to="/login" class="text-lg bg-white rounded-lg cursor-pointer font-semibold text-green-500 p-2">
-            		Iniciar Sesion | Chatear
+            Iniciar Sesion
             	</RouterLink>
             </nav>
         </div>

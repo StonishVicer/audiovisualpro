@@ -22,7 +22,7 @@ export const validateProyecto = [
 ]
 
 export const validateCliente = [
-    body('rif_cliente').notEmpty().withMessage('RIF requerido'),
+    body('rif_cliente').notEmpty().withMessage('Identificación requerida'),
     body('nombre_cliente').notEmpty().withMessage('Nombre del cliente requerido'),
     body('email_cliente').optional().isEmail().withMessage('Email inválido'),
     body('telefono_cliente').optional().isString(),
